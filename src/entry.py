@@ -1,0 +1,3 @@
+import handler
+
+handler.main()
