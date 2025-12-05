@@ -26,5 +26,9 @@ def parse_args():
         outputfile = os.path.join("build", filename)
     else:
         outputfile = None
-
-    return targetfile, outputfile, args
+        
+    runOnCompile = False
+    if args.run:
+        runOnCompile = True
+    
+    return targetfile, outputfile, args, runOnCompile
