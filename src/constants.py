@@ -1,3 +1,13 @@
+import os
+
+GCC_PATH = 'gcc'
+PYTHON_PATH = 'python3'
+
+SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) #MahkrabCLI/src
+BASE_DIR = os.path.dirname(SOURCE_DIR)
+ASSETS_DIR = os.path.join(SOURCE_DIR, "assets")
+TERRY_FILE = os.path.join(ASSETS_DIR, "terry.txt")
+
 class Colours: 
     """ansi colour codes"""
     RED = '\033[91m'
@@ -7,6 +17,3 @@ class Colours:
     MAGENTA = '\033[95m'
     CYAN = '\033[96m'
     ENDC = '\033[0m'
-
-python_path = 'python3'
-gcc_path = 'gcc'

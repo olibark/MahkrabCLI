@@ -8,8 +8,8 @@ def exec(full_path, outputfile, args, runOnCompile):
         starttime = time.time()
         
         subprocess.run(
-            (f'{c.gcc_path} "{full_path}" -o "{outputfile}" && ./{outputfile}') if runOnCompile else
-            (f'{c.gcc_path} "{full_path}" -o "{outputfile}"'),
+            (f'{c.GCC_PATH} "{full_path}" -o "{outputfile}" && ./{outputfile}') if runOnCompile else
+            (f'{c.GCC_PATH} "{full_path}" -o "{outputfile}"'),
             check=True,
             shell=True,
             stdout=sys.stdout,
@@ -19,16 +19,16 @@ def exec(full_path, outputfile, args, runOnCompile):
         
         endtime = time.time()
         timetaken = endtime - starttime
-        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} Script executed succesfully.")
+        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} Script executed succesfully")
         if runOnCompile:
-            print(f"{c.Colours.CYAN}Compiled and run in {timetaken:.2f} seconds.{c.Colours.ENDC}\n")
+            print(f"{c.Colours.CYAN}Compiled and ran in {timetaken:.2f} seconds.{c.Colours.ENDC}\n")
         else:
             print(f"{c.Colours.CYAN}Compiled in {timetaken:.2f} seconds.{c.Colours.ENDC}\n")
         
     except subprocess.CalledProcessError as e:
-        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} Command failed with return code {e.returncode}.\n")
+        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} Command failed with return code {e.returncode}.\n")
     except FileNotFoundError: 
-        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} Gcc not found in PATH.\n")
+        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} Gcc not found in PATH.\n")
     except Exception as e:
-        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} An unexpected error occured {e}.\n")
+        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} An unexpected error occured {e}.\n")
     

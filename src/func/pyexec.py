@@ -6,7 +6,7 @@ def exec(targetfile, outputfile, args):
         startime = time.time()
         
         subprocess.run(
-            f'{c.python_path} -u "{full_path}"',
+            f'{c.PYTHON_PATH} -u "{full_path}"',
             check=True, 
             shell=True,
             stdout=sys.stdout,
@@ -16,7 +16,7 @@ def exec(targetfile, outputfile, args):
          
         endtime = time.time()
         timetaken = endtime - startime
-        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} Script executed succesfully")
+        print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} Script executed succesfully")
         print(f"{c.Colours.CYAN}Executed in {timetaken:.2f} seconds.\n")
         
     except subprocess.CalledProcessError as e:
