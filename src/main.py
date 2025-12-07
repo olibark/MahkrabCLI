@@ -11,12 +11,17 @@ def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool
     full_path = os.path.abspath(targetfile)         
     
     if targetfile.endswith('.py'):
-        pyexec.exec(targetfile, outputfile, args)
+        pyexec.Executor.exec(targetfile, outputfile, args)
     elif targetfile.endswith('.c'):
-        cexec.exec(full_path, outputfile, args, runOnCompile)
+        cexec.Executor.exec(full_path, outputfile, args, runOnCompile)
 
 def main():
     targetfile, outputfile, args, runOnCompile = parser.parse_args()
+    
+    if not targetfile and not args.terry: 
+        print(f"mk: {c.Colours.RED}Error:{c.Colours.ENDC} No input file.")
+        print(f"{c.Colours.CYAN}Use -h or --help for more information.{c.Colours.ENDC}")
+        return
     
     handlers = {
         'terry': terry.terry, 
