@@ -14,7 +14,9 @@ def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool
         pyexec.Executor.exec(targetfile, outputfile, args)
     elif targetfile.endswith('.c'):
         cexec.Executor.exec(full_path, outputfile, args, runOnCompile)
-
+    elif '.' not in targetfile:
+        cexec.Executor.runbin(targetfile)
+        
 def main():
     targetfile, outputfile, args, runOnCompile = parser.parse_args()
     
