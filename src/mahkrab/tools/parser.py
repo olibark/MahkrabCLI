@@ -1,4 +1,5 @@
-import os, sys, argparse as ap
+import os
+import argparse as ap
 
 def parse_args():
     parser = ap.ArgumentParser(
@@ -6,12 +7,36 @@ def parse_args():
         description="A script to demonstrate command-line flags."
         )
     
-    parser.add_argument('-o', '--output', type=str, metavar='<file>', help="Name of output file")
-    parser.add_argument('targetfile', nargs='?', type=str, help="Pass file to function")
-    parser.add_argument('-t', '--terry', action="store_true", help="The commands of Terry the terrible")
-    parser.add_argument('-v', '--version', action='version', version='MAHKRAB-CLI 1.0', help="Show program version")
-    parser.add_argument('-r', '--run', action='store_true', help="Run the target file after compilation")
-    parser.add_argument('-c', '--clear', action='store_true', help="Clear the console before execution")
+    parser.add_argument(
+        '-o', '--output', 
+        type=str, metavar='<file>', 
+        help="Name of output file"
+    )
+    parser.add_argument(
+        'targetfile', nargs='?', 
+        type=str, help="Pass file to function"
+    )
+    parser.add_argument(
+        '-t', '--terry', 
+        action="store_true", 
+        help="The commands of Terry the terrible"
+    )
+    parser.add_argument(
+        '-v', '--version', 
+        action='version', 
+        version='MAHKRAB-CLI 1.0', 
+        help="Show program version"
+    )
+    parser.add_argument(
+        '-r', '--run', 
+        action='store_true', 
+        help="Run the target file after compilation"
+    )
+    parser.add_argument(
+        '-c', '--clear', 
+        action='store_true', 
+        help="Clear the console before execution"
+    )
     
     args = parser.parse_args()
     
@@ -28,9 +53,6 @@ def parse_args():
     else:
         outputfile = None
         
-    if args.run: 
-        runOnCompile = True 
-    else: 
-        runOnCompile = False
+    runOnCompile = bool(args.run)
     
     return targetfile, outputfile, args, runOnCompile
