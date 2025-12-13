@@ -1,13 +1,15 @@
 import os, constants as c
 from tools import parser
 from func import terry, run
+from constants import *
+
     
 def main():
     targetfile, outputfile, args, runOnCompile = parser.parse_args()
     
     if not targetfile and not args.terry and not args.clear: 
-        print(f"mk: {c.Colours.RED}Error:{c.Colours.ENDC} No input file.")
-        print(f"{c.Colours.CYAN}Use -h or --help for more information.{c.Colours.ENDC}")
+        print(f"\n{Colours.MAGENTA}[MAHKRAB-CLI] - {Colours.RED}Error:{Colours.ENDC} No input file.")
+        print(f"{Colours.CYAN}Use {Colours.BLUE}-h {Colours.CYAN}or {Colours.BLUE}--help{Colours.CYAN} for more information.{Colours.ENDC}\n")
         return
     
     handlers = {
@@ -21,5 +23,5 @@ def main():
                 os.system(c.CLEAR)
             handler()
             break
-    
+           
 main()
