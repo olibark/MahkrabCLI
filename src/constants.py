@@ -17,3 +17,5 @@ class Colours:
     MAGENTA = '\033[95m'
     CYAN = '\033[96m'
     ENDC = '\033[0m'
+    
+CLEAR = 'cls' if os.name == 'nt' else 'clear'

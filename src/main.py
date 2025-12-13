@@ -1,38 +1,25 @@
-import argparse as ap
 import os, constants as c
 from tools import parser
-from func import pyexec, cexec, terry
+from func import terry, run
     
-def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool):
-    if not targetfile:
-        print(f"{c.Colours.RED}Error:{c.Colours.ENDC} No target file specified for the function.")
-        return
-    
-    full_path = os.path.abspath(targetfile)         
-    
-    if targetfile.endswith('.py'):
-        pyexec.Executor.exec(targetfile, outputfile, args)
-    elif targetfile.endswith('.c'):
-        cexec.Executor.exec(full_path, outputfile, args, runOnCompile)
-    elif '.' not in targetfile:
-        cexec.Executor.runbin(targetfile)
-        
 def main():
     targetfile, outputfile, args, runOnCompile = parser.parse_args()
     
-    if not targetfile and not args.terry: 
+    if not targetfile and not args.terry and not args.clear: 
         print(f"mk: {c.Colours.RED}Error:{c.Colours.ENDC} No input file.")
         print(f"{c.Colours.CYAN}Use -h or --help for more information.{c.Colours.ENDC}")
         return
     
     handlers = {
         'terry': terry.terry, 
-        'targetfile': lambda: run(targetfile, outputfile, args, runOnCompile)
+        'targetfile': lambda: run.run(targetfile, outputfile, args, runOnCompile),
     }      
     
     for arg_name, handler, in handlers.items():
         if getattr(args, arg_name):
+            if args.clear: 
+                os.system(c.CLEAR)
             handler()
             break
-        
+    
 main()

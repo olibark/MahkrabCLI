@@ -1,6 +1,6 @@
 import os, time, subprocess, sys, constants as c
 class Executor:
-    def exec(full_path, outputfile, args, runOnCompile):
+    def exec(full_path, outputfile, args, runOnCompile) -> None:
         if os.name == 'nt':
             outputfile += ".exe"
         
@@ -32,7 +32,7 @@ class Executor:
         except Exception as e:
             print(f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n")
     
-    def runbin(targetfile):
+    def runbin(targetfile, args) -> None:
         try:
             startime = time.time()
             if not os.path.exists(f"build/{targetfile}"):

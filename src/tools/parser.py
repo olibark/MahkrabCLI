@@ -11,7 +11,8 @@ def parse_args():
     parser.add_argument('-t', '--terry', action="store_true", help="The commands of Terry the terrible")
     parser.add_argument('-v', '--version', action='version', version='MAHKRAB-CLI 1.0', help="Show program version")
     parser.add_argument('-r', '--run', action='store_true', help="Run the target file after compilation")
-        
+    parser.add_argument('-c', '--clear', action='store_true', help="Clear the console before execution")
+    
     args = parser.parse_args()
     
     targetfile = args.targetfile
@@ -27,8 +28,9 @@ def parse_args():
     else:
         outputfile = None
         
-    runOnCompile = False
-    if args.run:
-        runOnCompile = True
+    if args.run: 
+        runOnCompile = True 
+    else: 
+        runOnCompile = False
     
     return targetfile, outputfile, args, runOnCompile
