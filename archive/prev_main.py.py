@@ -1,8 +1,9 @@
-import os, constants as c
-from tools import parser
-from func import terry, run
-from constants import *
-
+import os
+from mahkrab import constants as c
+import mahkrab.func.terry as terry
+import mahkrab.func.run as run
+from mahkrab.tools import parser
+from mahkrab.constants import Colours
     
 def main():
     targetfile, outputfile, args, runOnCompile = parser.parse_args()
