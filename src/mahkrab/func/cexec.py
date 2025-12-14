@@ -1,7 +1,4 @@
-import os
-import subprocess
-import sys
-import time
+import os, subprocess, sys, time
 
 from mahkrab import constants as c 
 
@@ -51,15 +48,18 @@ class Executor:
             
         except subprocess.CalledProcessError as e:
             print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} Command failed with return code {c.Colours.RED}{e.returncode}{c.Colours.ENDC}.\n"
+                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+                f"Error:{c.Colours.ENDC} Command failed with return code {c.Colours.RED}{e.returncode}{c.Colours.ENDC}.\n"
             )
         except FileNotFoundError: 
             print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} Gcc not found in {c.Colours.RED}PATH{c.Colours.ENDC}.\n"
+                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+                f"Error:{c.Colours.ENDC} Gcc not found in {c.Colours.RED}PATH{c.Colours.ENDC}.\n"
             )
         except Exception as e:
             print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n"
+                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+                f"Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n"
             )
     
     @staticmethod
@@ -94,13 +94,16 @@ class Executor:
             
         except subprocess.CalledProcessError as e:
             print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} Command failed with return code {c.Colours.RED}{e.returncode}{c.Colours.ENDC}.\n"
+                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+                f"Error:{c.Colours.ENDC} Command failed with return code {c.Colours.RED}{e.returncode}{c.Colours.ENDC}.\n"
             )
         except FileNotFoundError: 
             print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} Binary not found in {c.Colours.RED} directory{c.Colours.ENDC}.\n"
+                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+                f"Error:{c.Colours.ENDC} Binary not found in {c.Colours.RED} directory{c.Colours.ENDC}.\n"
             )
         except Exception as e:
             print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n"
+                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+                f"Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n"
             )
