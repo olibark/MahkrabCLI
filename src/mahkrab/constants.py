@@ -4,6 +4,10 @@ import os
 import sys
 from pathlib import Path
 
+from mahkrab.tools.oscheck import findOS
+
+osName = findOS()
+
 GCC_PATH = os.environ.get("MAHKRAB_GCC", "gcc")
 
 PYTHON_PATH = os.environ.get("MAHKRAB_PYTHON", sys.executable)
@@ -24,4 +28,4 @@ class Colours:
     ENDC = "\033[0m"
 
 
-CLEAR = "cls" if os.name == "nt" else "clear"
+CLEAR = "cls" if osName == "windows" else "clear"

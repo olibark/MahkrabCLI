@@ -1,12 +1,12 @@
-import os, subprocess, sys
+import os, subprocess, sys, argparse as ap
 
 from mahkrab import constants as c
-from mahkrab.tools.decorators.timed import timed_decorator as timed
+from mahkrab.tools.decorators.timers import runtime
 
 class Executor:
+    @runtime
     @staticmethod
-    @timed
-    def run(targetfile) -> None:
+    def run(targetfile: str) -> None:
         
         subprocess.run(
             [c.PYTHON_PATH, "-u", targetfile],
@@ -18,7 +18,7 @@ class Executor:
         )
         
     @staticmethod
-    def exec(targetfile, outputfile, args) -> None:
+    def exec(targetfile: str, outputfile: str, args: ap.Namespace) -> None:
         full_path = os.path.abspath(targetfile)
         
         try:
