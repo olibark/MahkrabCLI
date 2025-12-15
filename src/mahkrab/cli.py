@@ -11,7 +11,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     
     if not targetfile and not args.terry and not args.clear:
         print(
-            f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] - {c.Colours.RED}Error:{c.Colours.ENDC} No input file."
+            f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] - {c.Colours.RED}Error:{c.Colours.ENDC} No inputt file."
         )
         print(
             f"{c.Colours.CYAN}Use {c.Colours.BLUE}-h {c.Colours.CYAN}or {c.Colours.BLUE}--help{c.Colours.CYAN} for more information.{c.Colours.ENDC}\n"
