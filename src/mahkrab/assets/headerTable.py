@@ -40,6 +40,7 @@ def searchHeaderTable(header: str, flags: list[str]) -> list[str]:
     elif header == 'png++/png.hpp':         flags.append('-lpng')
     elif header == 'math.h':                flags.append('-lm')
     elif header == 'pthread.h':             flags.append('-pthread')
+    #elif header == 'gtl/gtk.h':              
     elif header == 'gtk/gtk.h':             flags.append('$(pkg-config --cflags --libs gtk+-3.0)')
     elif header == 'glib.h':                flags.append('$(pkg-config --cflags --libs glib-2.0)')
     elif header == 'gdk-pixbuf/gdk-pixbuf.h': flags.append('$(pkg-config --cflags --libs gdk-pixbuf-2.0)')

@@ -1,4 +1,4 @@
-from mahkrab.tools.headerTable import searchHeaderTable
+from mahkrab.assets.headerTable import searchHeaderTable
 
 def findDependencies(fileLocation: str) -> str:
     flags = [] #holds the flags needed in source

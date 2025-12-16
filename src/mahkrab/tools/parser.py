@@ -6,7 +6,6 @@ def parse_args():
         prog='MAHKRAB-CLI', 
         description="A script to demonstrate command-line flags."
         )
-    
     parser.add_argument(
         '-o', '--output', 
         type=str, metavar='<file>', 
@@ -36,6 +35,11 @@ def parse_args():
         '-c', '--clear', 
         action='store_true', 
         help="Clear the console before execution"
+    )
+    parser.add_argument(
+        '-og','--ogs',
+        action='store_true',
+        help="ogs"
     )
     
     args = parser.parse_args()

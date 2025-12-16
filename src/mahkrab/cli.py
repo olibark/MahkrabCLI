@@ -3,13 +3,13 @@ from typing import Callable, Optional
 
 from mahkrab import constants as c 
 from mahkrab.tools import parser
-from mahkrab.func import terry, run
+from mahkrab.func import terry, run, og
 
 def main(argv: Optional[list[str]] = None) -> int:
     targetfile, outputfile, args, runOnCompile = parser.parse_args()
     setattr(args, "targetfile", bool(targetfile))
     
-    if not targetfile and not args.terry and not args.clear:
+    if not targetfile and not args.terry and not args.clear and not args.ogs:
         print(
             f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] - {c.Colours.RED}Error:{c.Colours.ENDC} No input file."
         )
@@ -22,7 +22,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         'terry': terry.terry,
         'targetfile': lambda: run.run(
             targetfile, outputfile, args, runOnCompile
-        )
+        ),
+        'ogs': og.ogs
     }
     
     for arg_name, handler, in handlers.items():
