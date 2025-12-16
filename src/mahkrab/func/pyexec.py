@@ -10,8 +10,7 @@ class Executor:
         
         subprocess.run(
             [c.PYTHON_PATH, "-u", targetfile],
-            check=True, 
-            shell=False,
+            check=True,
             stdout=sys.stdout,
             stderr=sys.stderr,
             text=True,
