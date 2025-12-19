@@ -2,7 +2,7 @@ import os
 import argparse as ap
 
 from mahkrab import constants as c
-from mahkrab.func import pyexec, cexec, binexec
+from mahkrab.func import pyexec, cexec, binexec, asmexec
 
 def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool) -> None:
     if not targetfile:
@@ -18,5 +18,8 @@ def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool
         pyexec.Executor.exec(targetfile, outputfile, args)
     elif targetfile.endswith('.c'):
         cexec.Executor.exec(full_path, outputfile, args, runOnCompile)
-    elif '.' not in targetfile:
+    elif targetfile.endswith('.asm'):
+        asmexec.Executor.exec(full_path, outputfile, args, runOnCompile)
+        
+    elif '.' and '.exe' not in targetfile:
         binexec.execbin(targetfile, args)

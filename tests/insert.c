@@ -25,5 +25,6 @@ void genPass(int lenofpass) {
 int main() {
     int lenofpass;
     scanf("%i", &lenofpass);
+    genPass(lenofpass);
     return 0;
 }

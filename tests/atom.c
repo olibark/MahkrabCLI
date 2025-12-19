@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define WINDOW_WIDTH  600
-#define WINDOW_HEIGHT 600
-#define NUM_PARTICLES 2000
+#define WINDOW_WIDTH  1920
+#define WINDOW_HEIGHT 1080
+#define NUM_PARTICLES 1
 
 typedef struct {
     float x, y;      // Current positio
