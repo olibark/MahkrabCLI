@@ -1,6 +1,6 @@
-import subprocess, os, sys, argparse as ap
+import subprocess, os, sys
 
-from mahkrab.tools.decorators.timers import runtime, compiletime
+from mahkrab.tools.decorators.timers import runtime
 from mahkrab import constants as c 
 
 @runtime
@@ -13,7 +13,7 @@ def run(run_cmd: list[str]) -> None:
         text=True,
     )
     
-def execbin(targetfile: str, args: ap.Namespace) -> None:
+def execbin(targetfile: str) -> None:
     try: 
         build_path = os.path.join("build", targetfile)
         run_path = build_path if os.path.exists(build_path) else targetfile

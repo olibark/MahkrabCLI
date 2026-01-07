@@ -1,14 +1,13 @@
-import os, subprocess, sys, time
+import subprocess, sys
 import argparse as ap
 
 from mahkrab.tools import findDependencies
 from mahkrab import constants as c
-from mahkrab.func import binexec
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
 
 class Executor:
     @staticmethod
-    def findFlags(full_path: str) -> None:
+    def findFlags(full_path: str) -> str:
         flags = findDependencies.findDependencies(full_path)
         
         return flags

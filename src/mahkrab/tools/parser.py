@@ -37,6 +37,11 @@ def parse_args():
         help="Clear the console before execution"
     )
     parser.add_argument(
+        '-ls', '--list', 
+        type=int, metavar='<listLevel>', nargs='?', const=1,
+        help="Lists the directories contents"
+    )
+    parser.add_argument(
         '-og','--ogs',
         action='store_true',
         help="ogs"
@@ -44,13 +49,19 @@ def parse_args():
     
     args = parser.parse_args()
     
-    targetfile = args.targetfile
+    targetfile = None
+    outputfile = None
+    level = None
     
     if not os.path.exists("build"):
         os.makedirs("build")
     
+    if args.targetfile: 
+        targetfile = args.targetfile
     if args.output:
         outputfile = args.output
+    if args.list: 
+        level = args.list
     elif targetfile:
         filename = os.path.splitext(os.path.basename(targetfile))[0]
         outputfile = os.path.join("build", filename)
@@ -59,4 +70,4 @@ def parse_args():
         
     runOnCompile = bool(args.run)
     
-    return targetfile, outputfile, args, runOnCompile
+    return targetfile, outputfile, args, runOnCompile, level

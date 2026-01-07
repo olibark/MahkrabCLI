@@ -20,6 +20,5 @@ def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool
         cexec.Executor.exec(full_path, outputfile, args, runOnCompile)
     elif targetfile.endswith('.asm'):
         asmexec.Executor.exec(full_path, outputfile, args, runOnCompile)
-        
     elif '.' and '.exe' not in targetfile:
-        binexec.execbin(targetfile, args)
+        binexec.execbin(targetfile)
