@@ -7,7 +7,7 @@
 
 #define WINDOW_WIDTH  1920
 #define WINDOW_HEIGHT 1080
-#define NUM_PARTICLES 1
+#define NUM_PARTICLES 50
 
 typedef struct {
     float x, y;      // Current positio
