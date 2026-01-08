@@ -16,7 +16,7 @@ def runtime(func) -> callable:
             f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} Script executed succesfully"
         )
         print(
-            f"{c.Colours.CYAN}Executed in {c.Colours.BLUE}{timetaken:.2f}{c.Colours.CYAN} seconds.{c.Colours.ENDC}\n"
+            f"{c.Colours.CYAN}Executed in {c.Colours.BLUE}{timetaken}{c.Colours.CYAN} seconds.{c.Colours.ENDC}\n"
         )
         
         return result
@@ -34,7 +34,7 @@ def compiletime(func) -> callable:
             f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} Script executed succesfully"
         )
         print(
-            f"{c.Colours.CYAN}Compiled in {c.Colours.BLUE}{timetaken:.2f}{c.Colours.CYAN} seconds.{c.Colours.ENDC}\n"
+            f"{c.Colours.CYAN}Compiled in {c.Colours.BLUE}{timetaken}{c.Colours.CYAN} seconds.{c.Colours.ENDC}\n"
         )
         
         return result
@@ -52,7 +52,7 @@ def compileruntime(func):
             f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} Script executed succesfully"
         )
         print(
-            f"{c.Colours.CYAN}Compiled and run in {c.Colours.BLUE}{timetaken:.2f}{c.Colours.CYAN} seconds.{c.Colours.ENDC}\n"
+            f"{c.Colours.CYAN}Compiled and run in {c.Colours.BLUE}{timetaken}{c.Colours.CYAN} seconds.{c.Colours.ENDC}\n"
         )
         return result
     return timer

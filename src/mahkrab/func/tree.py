@@ -1,5 +1,6 @@
 import subprocess, sys
 
+@staticmethod
 def list(level: int) -> None:
     subprocess.run(
         ["tree", "-L", str(level), "."],

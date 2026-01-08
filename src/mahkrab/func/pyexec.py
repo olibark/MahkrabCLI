@@ -4,8 +4,8 @@ from mahkrab import constants as c
 from mahkrab.tools.decorators.timers import runtime
 
 class Executor:
-    @runtime
     @staticmethod
+    @runtime
     def run(targetfile: str) -> None:
         
         subprocess.run(

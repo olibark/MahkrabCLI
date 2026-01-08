@@ -12,7 +12,7 @@ def run(run_cmd: list[str]) -> None:
         stderr=sys.stderr,
         text=True,
     )
-    
+
 def execbin(targetfile: str) -> None:
     try: 
         build_path = os.path.join("build", targetfile)
@@ -32,7 +32,7 @@ def execbin(targetfile: str) -> None:
     except FileNotFoundError: 
         print(
             f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
-            f"Error:{c.Colours.ENDC} Binary not found in {c.Colours.RED} directory{c.Colours.ENDC}.\n"
+            f"Error:{c.Colours.ENDC} Binary not found in {c.Colours.RED}directory{c.Colours.ENDC}.\n"
         )
     except Exception as e:
         print(

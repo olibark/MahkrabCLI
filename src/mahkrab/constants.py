@@ -1,7 +1,5 @@
 from __future__ import annotations
-
-import os
-import sys
+import os, sys
 from pathlib import Path
 
 from mahkrab.tools.oscheck import findOS
@@ -9,7 +7,7 @@ from mahkrab.tools.oscheck import findOS
 osName = findOS()
 
 GCC_PATH = os.environ.get("MAHKRAB_GCC", "gcc")
-
+NASM_PATH = os.environ.get("MAHKRAB_NASM", "nasm")
 PYTHON_PATH = os.environ.get("MAHKRAB_PYTHON", sys.executable)
 
 SOURCE_DIR = Path(__file__).resolve().parent
@@ -26,6 +24,5 @@ class Colours:
     MAGENTA = "\033[95m"
     CYAN = "\033[96m"
     ENDC = "\033[0m"
-
 
 CLEAR = "cls" if osName == "windows" else "clear"

@@ -51,6 +51,7 @@ class Executor:
                 f"Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n"
             )
     
+    @staticmethod
     @compiletime
     def compile(cmd: list[str]) -> None:
         subprocess.run(
@@ -61,6 +62,7 @@ class Executor:
                 text=True,
             )
     
+    @staticmethod
     @compileruntime
     def runOnCompile(cmd: list[str], run_cmd: list[str]) -> None:
         subprocess.run(

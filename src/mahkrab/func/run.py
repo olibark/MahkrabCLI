@@ -4,6 +4,7 @@ import argparse as ap
 from mahkrab import constants as c
 from mahkrab.func import pyexec, cexec, binexec, asmexec
 
+@staticmethod
 def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool) -> None:
     if not targetfile:
         print(
