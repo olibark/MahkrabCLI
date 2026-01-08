@@ -1,6 +1,8 @@
+import subprocess
+
 from mahkrab.assets.headerTable import searchHeaderTable
 
-def findDependencies(fileLocation: str) -> str:
+def findDependencies(fileLocation: str) -> list[str]:
     flags = [] #holds the flags needed in source
     try:
         with open(fileLocation, 'r', encoding='utf-8', errors='ignore') as file:
@@ -17,5 +19,22 @@ def findDependencies(fileLocation: str) -> str:
                 flags = searchHeaderTable(header, flags)
 
     except FileNotFoundError:
-        return ''
-    return ' ' + ' '.join(flags) if flags else ''
+        return []
+
+    expanded_flags = []
+    for flag in flags:
+        if flag.startswith("pkg-config "):
+            try:
+                result = subprocess.run(
+                    flag.split(),
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                expanded_flags.extend(result.stdout.split())
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                expanded_flags.append(flag)
+        else:
+            expanded_flags.append(flag)
+
+    return expanded_flags

@@ -7,7 +7,7 @@ from mahkrab.tools.decorators.timers import compiletime, compileruntime
 
 class Executor:
     @staticmethod
-    def findFlags(full_path: str) -> str:
+    def findFlags(full_path: str) -> list[str]:
         flags = findDependencies.findDependencies(full_path)
         
         return flags
@@ -22,7 +22,7 @@ class Executor:
         cmd = [c.GCC_PATH, full_path]
         
         if flags:
-            cmd.extend(flags.split())
+            cmd.extend(flags)
         
         cmd.extend(['-o', outputfile])
         

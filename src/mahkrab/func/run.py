@@ -4,7 +4,6 @@ import argparse as ap
 from mahkrab import constants as c
 from mahkrab.func import pyexec, cexec, binexec, asmexec
 
-@staticmethod
 def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool) -> None:
     if not targetfile:
         print(
@@ -21,5 +20,7 @@ def run(targetfile: str, outputfile: str, args: ap.Namespace, runOnCompile: bool
         cexec.Executor.exec(full_path, outputfile, args, runOnCompile)
     elif targetfile.endswith('.asm'):
         asmexec.Executor.exec(full_path, outputfile, args, runOnCompile)
-    elif '.' and '.exe' not in targetfile:
-        binexec.execbin(targetfile)
+    else:
+        ext = os.path.splitext(targetfile)[1].lower()
+        if ext in ("", ".exe"):
+            binexec.execbin(targetfile)

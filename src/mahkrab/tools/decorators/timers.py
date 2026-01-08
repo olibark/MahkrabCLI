@@ -3,7 +3,6 @@ from functools import wraps
 
 from mahkrab import constants as c
 
-@staticmethod
 def runtime(func) -> callable:
     @wraps(func)
     def timer(*args, **kwargs) -> any:

@@ -22,6 +22,7 @@ coverage.xml
 *.tmp
 *.swp
 *~
+.venv/
 venv/
 ENV/
 .env
