@@ -55,7 +55,7 @@ def parse_args():
     outputfile = None
     level = None
     
-    if not os.path.exists("build"):
+    if not os.path.exists("build") and args.targetfile:
         os.makedirs("build")
     
     if args.targetfile: 
