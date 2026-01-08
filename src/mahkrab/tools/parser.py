@@ -1,6 +1,8 @@
 import os
 import argparse as ap
 
+from mahkrab.tools.getversion import get_version
+
 def parse_args():
     parser = ap.ArgumentParser(
         prog='MAHKRAB-CLI', 
@@ -23,7 +25,7 @@ def parse_args():
     parser.add_argument(
         '-v', '--version', 
         action='version', 
-        version='MAHKRAB-CLI 1.0', 
+        version=f"mahkrab {get_version()}",
         help="Show program version"
     )
     parser.add_argument(
