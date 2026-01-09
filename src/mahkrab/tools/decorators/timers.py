@@ -55,4 +55,3 @@ def compileruntime(func):
         )
         return result
     return timer
-        
