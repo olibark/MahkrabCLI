@@ -3,17 +3,17 @@ import subprocess
 from mahkrab.assets.headerTable import searchHeaderTable
 
 def findDependencies(fileLocation: str) -> list[str]:
-    flags = [] #holds the flags needed in source
+    flags = []
     try:
         with open(fileLocation, 'r', encoding='utf-8', errors='ignore') as file:
             for line in file:
                 line = line.strip()
                 if not line.startswith('#include'):
-                    continue #ignoring non-include lines
+                    continue
                 header = (
                     line.replace('#include', '')
                         .replace('<', '').replace('>', '')
-                        .replace('"', '').strip() #extracts the file name of the header
+                        .replace('"', '').strip()
                 )
 
                 flags = searchHeaderTable(header, flags)

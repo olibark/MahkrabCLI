@@ -1,30 +1,16 @@
 import subprocess, sys
 import argparse as ap
 
-from mahkrab.tools import findDependencies
 from mahkrab import constants as c
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
 
 class Executor:
     @staticmethod
-    def findFlags(full_path: str) -> list[str]:
-        flags = findDependencies.findDependencies(full_path)
-        
-        return flags
-    
-    @staticmethod
     def exec(full_path: str, outputfile: str, args: ap.Namespace, runOnCompile: bool) -> None:
         if c.osName == "windows" and not outputfile.endswith('.exe'):
             outputfile += ".exe"
         
-        flags = Executor.findFlags(full_path)
-        
-        cmd = [c.GCC_PATH, full_path]
-        
-        if flags:
-            cmd.extend(flags)
-        
-        cmd.extend(['-o', outputfile])
+        cmd = [c.RUSTC_PATH, full_path, "-o", outputfile]
         
         try:
             if runOnCompile:
@@ -43,7 +29,7 @@ class Executor:
         except FileNotFoundError: 
             print(
                 f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} Gcc not found in {c.Colours.RED}PATH{c.Colours.ENDC}.\n"
+                f"Error:{c.Colours.ENDC} Rustc not found in {c.Colours.RED}PATH{c.Colours.ENDC}.\n"
             )
         except Exception as e:
             print(
