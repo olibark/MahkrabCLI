@@ -1,7 +1,7 @@
-import subprocess, sys
+import os, subprocess, sys
 import argparse as ap
 
-from mahkrab.tools.ccpp import findDependencies
+from mahkrab.tools.cpp import findDependencies
 from mahkrab import constants as c
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
 
@@ -18,19 +18,26 @@ class Executor:
             outputfile += ".exe"
         
         flags = Executor.findFlags(full_path)
+        extraArgs = list(getattr(args, 'programArgs', []))
         
         cmd = [c.GPP_PATH, full_path]
         
         if flags:
             cmd.extend(flags)
+
+        if extraArgs:
+            cmd.extend(extraArgs)
         
         cmd.extend(['-o', outputfile])
         
         try:
             if runOnCompile:
-                run_cmd = (
-                    [outputfile] if c.osName == "windows" else [f'./{outputfile}']
-                )
+                if c.osName == "windows":
+                    run_cmd = [outputfile]
+                elif os.path.isabs(outputfile):
+                    run_cmd = [outputfile]
+                else:
+                    run_cmd = [f'./{outputfile}']
                 Executor.runOnCompile(cmd, run_cmd)
             else:
                 Executor.compile(cmd)

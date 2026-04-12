@@ -33,5 +33,9 @@ Thumbs.db
 .idea/
 .vscode/
 *.vsix
+.git/
+.gitignore
 archive/
 tests/
+.mkconfig
+demo/

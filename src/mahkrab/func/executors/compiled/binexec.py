@@ -13,14 +13,20 @@ def run(run_cmd: list[str]) -> None:
         text=True,
     )
 
-def execbin(targetfile: str) -> None:
+def execbin(targetfile: str, programArgs: list[str] | None = None) -> None:
     try: 
+        extraArgs = programArgs or []
         build_path = os.path.join("build", targetfile)
         run_path = build_path if os.path.exists(build_path) else targetfile
         
-        run_cmd = (
-            [run_path] if c.osName == "windows" else [f"./{run_path}"]
-        )
+        if c.osName == "windows":
+            run_cmd = [run_path]
+        elif os.path.isabs(run_path):
+            run_cmd = [run_path]
+        else:
+            run_cmd = [f"./{run_path}"]
+
+        run_cmd.extend(extraArgs)
         
         run(run_cmd)
     

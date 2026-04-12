@@ -1,4 +1,4 @@
-import subprocess, sys
+import os, subprocess, sys
 import argparse as ap
 
 from mahkrab import constants as c
@@ -10,13 +10,17 @@ class Executor:
         if c.osName == "windows" and not outputfile.endswith('.exe'):
             outputfile += ".exe"
         
-        cmd = [c.RUSTC_PATH, full_path, "-o", outputfile]
+        extraArgs = list(getattr(args, 'programArgs', []))
+        cmd = [c.RUSTC_PATH, full_path, *extraArgs, "-o", outputfile]
         
         try:
             if runOnCompile:
-                run_cmd = (
-                    [outputfile] if c.osName == "windows" else [f'./{outputfile}']
-                )
+                if c.osName == "windows":
+                    run_cmd = [outputfile]
+                elif os.path.isabs(outputfile):
+                    run_cmd = [outputfile]
+                else:
+                    run_cmd = [f'./{outputfile}']
                 Executor.runOnCompile(cmd, run_cmd)
             else:
                 Executor.compile(cmd)
