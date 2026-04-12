@@ -7,10 +7,11 @@ from mahkrab.tools.decorators.timers import compiletime, compileruntime
 class Executor:
     @staticmethod
     def exec(full_path: str, outputfile: str, args: ap.Namespace, runOnCompile: bool) -> None:
+        extraArgs = list(getattr(args, 'programArgs', []))
         classname = os.path.splitext(os.path.basename(full_path))[0]
-        out_dir = "build"
+        out_dir = os.path.dirname(outputfile) or "build"
         
-        cmd = [c.JAVAC_PATH, "-d", out_dir, full_path]
+        cmd = [c.JAVAC_PATH, *extraArgs, "-d", out_dir, full_path]
         run_cmd = [c.JAVA_PATH, "-cp", out_dir, classname]
         
         try:

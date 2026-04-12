@@ -1,37 +1,79 @@
-import os
 import argparse as ap
+import shlex
 
 from mahkrab.tools.getversion import get_version
 
-def parse_args():
+COMMANDS = {'run'}
+
+def parseProgramArgs(rawArgs: list[list[str]], unknownArgs: list[str]) -> list[str]:
+    args: list[str] = []
+
+    for rawArgGroup in rawArgs:
+        for rawArg in rawArgGroup:
+            args.extend(shlex.split(rawArg))
+
+    if unknownArgs and unknownArgs[0] == '--':
+        unknownArgs = unknownArgs[1:]
+
+    if unknownArgs:
+        args.extend(unknownArgs)
+
+    return args
+
+def parse_args(argv: list[str] | None = None) -> ap.Namespace:
     parser = ap.ArgumentParser(
-        prog='MAHKRAB-CLI', 
-        description="A script to demonstrate command-line flags."
-        )
-    parser.add_argument(
-        '-o', '--output', 
-        type=str, metavar='<file>', 
-        help="Name of output file"
+        prog="MAHKRAB-CLI",
     )
     parser.add_argument(
-        'targetfile', nargs='?', 
-        type=str, help="Pass file to function"
+        'target',
+        nargs="?",
+        help='Target file name',
     )
     parser.add_argument(
-        '-t', '--terry', 
-        action="store_true", 
-        help="The commands of Terry the terrible"
+        '-o', '--output',
+        type=str, metavar='<file>',
+        help='Output file name',
     )
     parser.add_argument(
-        '-v', '--version', 
-        action='version', 
-        version=f"mahkrab {get_version()}",
-        help="Show program version"
+        '--cwd',
+        type=str, metavar='<dir>',
+        help='Working directory override',
     )
     parser.add_argument(
-        '-r', '--run', 
-        action='store_true', 
-        help="Run the target file after compilation"
+        '--config',
+        type=str, metavar='<file>',
+        help='Path to configuration file',
+    )
+    parser.add_argument(
+        '--python',
+        dest='pythonCmd',
+        type=str, metavar='<python>',
+        help='Python interpreter override',
+    )
+    parser.add_argument(
+        '--lang',
+        type=str, metavar='<language>',
+        help='Language override',
+    )
+    parser.add_argument(
+        '--tool',
+        type=str, metavar='<tool>',
+        help='Compiler or interpreter override',
+    )
+    parser.add_argument(
+        '-r', '--run-on-compile',
+        dest='runOnCompile',
+        action='store_true',
+        help='Run the target file after compilation',
+    )
+    parser.add_argument(
+        '--program-args', '--tool-args',
+        dest='programArgsRaw',
+        action='append',
+        nargs='*',
+        default=[],
+        metavar='<args>',
+        help='Extra compiler/interpreter args (supports quoted values).',
     )
     parser.add_argument(
         '-c', '--clear', 
@@ -39,37 +81,44 @@ def parse_args():
         help="Clear the console before execution"
     )
     parser.add_argument(
-        '-ls', '--list', 
+        '-ls', '--list',
         type=int, metavar='<listLevel>', nargs='?', const=1,
-        help="Lists the directories contents"
+        help='Lists the directories contents',
     )
     parser.add_argument(
-        '-og','--ogs',
+        '-og', '--ogs',
         action='store_true',
-        help="ogs"
+        help='ogs',
+    )
+    parser.add_argument(
+        '-t', '--terry',
+        action='store_true',
+        help='The commands of Terry the terrible',
+    )
+    parser.add_argument(
+        '-e', '--explain',
+        action='store_true',
+        help='Show resolved settings before execution',
+    )
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version=f"mahkrab {get_version()}",
+        help='Show program version',
     )
     
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args(argv)
+
+    if unknown and not args.programArgsRaw:
+        parser.error(f'unrecognized arguments: {" ".join(unknown)}')
     
-    targetfile = None
-    outputfile = None
-    level = None
+    args.command = None
+    args.targetfile = None
+    args.programArgs = parseProgramArgs(args.programArgsRaw, unknown)
     
-    if not os.path.exists("build") and args.targetfile:
-        os.makedirs("build")
-    
-    if args.targetfile: 
-        targetfile = args.targetfile
-    if args.output:
-        outputfile = args.output
-    if args.list: 
-        level = args.list
-    elif targetfile:
-        filename = os.path.splitext(os.path.basename(targetfile))[0]
-        outputfile = os.path.join("build", filename)
+    if args.target in COMMANDS: 
+        args.command = args.target
     else:
-        outputfile = None
-        
-    runOnCompile = bool(args.run)
+        args.targetfile = args.target
     
-    return targetfile, outputfile, args, runOnCompile, level
+    return args

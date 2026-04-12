@@ -1,4 +1,4 @@
-import subprocess, sys
+import os, subprocess, sys
 import argparse as ap
 
 from mahkrab.tools.decorators.timers import compileruntime, compiletime
@@ -15,11 +15,15 @@ class Executor:
             return
             
         objfile = f"{outputfile}.o"
-        cmd = [c.NASM_PATH, "-f", "elf64", full_path, "-o", objfile]
+        extraArgs = list(getattr(args, 'programArgs', []))
+        cmd = [c.NASM_PATH, *extraArgs, "-f", "elf64", full_path, "-o", objfile]
         
         try:
             if runOnCompile:
-                run_cmd = [f"./{outputfile}"]
+                if os.path.isabs(outputfile):
+                    run_cmd = [outputfile]
+                else:
+                    run_cmd = [f"./{outputfile}"]
                 Executor.runOnCompile(cmd, objfile, outputfile, run_cmd)
             else:
                 Executor.compile(cmd, objfile, outputfile)

@@ -6,10 +6,10 @@ from mahkrab.tools.decorators.timers import runtime
 class Executor:
     @staticmethod
     @runtime
-    def run(targetfile: str) -> None:
+    def run(pythonCmd: str, targetfile: str, programArgs: list[str]) -> None:
         
         subprocess.run(
-            [c.PYTHON_PATH, "-u", targetfile],
+            [pythonCmd, "-u", *programArgs, targetfile],
             check=True,
             stdout=sys.stdout,
             stderr=sys.stderr,
@@ -19,9 +19,11 @@ class Executor:
     @staticmethod
     def exec(targetfile: str, outputfile: str, args: ap.Namespace) -> None:
         full_path = os.path.abspath(targetfile)
+        pythonCmd = str(getattr(args, 'pythonCmd', c.PYTHON_PATH))
+        programArgs = list(getattr(args, 'programArgs', []))
         
         try:
-            Executor.run(full_path)
+            Executor.run(pythonCmd, full_path, programArgs)
             
         except subprocess.CalledProcessError as e:
             print(
@@ -31,7 +33,7 @@ class Executor:
         except FileNotFoundError: 
             print(
                 f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} The {c.PYTHON_PATH} interpreter was not found.\n"
+                f"Error:{c.Colours.ENDC} The {pythonCmd} interpreter was not found.\n"
             )
         except Exception as e:
             print(

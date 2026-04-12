@@ -7,10 +7,10 @@ from mahkrab.tools.decorators.timers import runtime
 class Executor:
     @staticmethod
     @runtime
-    def run(full_path: str) -> None:
+    def run(full_path: str, programArgs: list[str]) -> None:
         with open(full_path, 'r', encoding='utf-8') as handle:
             subprocess.run(
-                [c.SQLITE3_PATH, ':memory:'],
+                [c.SQLITE3_PATH, *programArgs, ':memory:'],
                 check=True,
                 stdin=handle,
                 stdout=sys.stdout,
@@ -20,8 +20,10 @@ class Executor:
 
     @staticmethod
     def exec(full_path: str, outputfile: str, args: ap.Namespace) -> None:
+        programArgs = list(getattr(args, 'programArgs', []))
+
         try:
-            Executor.run(full_path)
+            Executor.run(full_path, programArgs)
 
         except subprocess.CalledProcessError as e:
             print(
