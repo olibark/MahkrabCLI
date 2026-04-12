@@ -1,7 +1,7 @@
 import subprocess, sys
 import argparse as ap
 
-from mahkrab.tools.ccpp import findDependencies
+from mahkrab.tools.cpp import findDependencies
 from mahkrab import constants as c
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
 
