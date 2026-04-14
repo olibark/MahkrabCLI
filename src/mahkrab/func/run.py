@@ -132,10 +132,11 @@ def run(targetfile: str, outputfile: str | None, args: ap.Namespace, runOnCompil
     extra_args = getExtraArgs(args)
     interpret_map = get_interpret_map(full_path, extra_args)
     compile_map = get_compile_map()
+    build_dir = getattr(args, 'buildDir', 'build')
 
     if not outputfile:
         filename = os.path.splitext(os.path.basename(targetfile))[0]
-        outputfile = os.path.join('build', filename)
+        outputfile = os.path.join(build_dir, filename)
 
     command_compile_map = get_command_compile_map(full_path, outputfile, extra_args)
 
@@ -153,4 +154,4 @@ def run(targetfile: str, outputfile: str | None, args: ap.Namespace, runOnCompil
         interpexec.Executor.exec(run_cmd, tool_name, args)
     else:
         if ext in ('', '.exe'):
-            binexec.execbin(targetfile, extra_args)
+            binexec.execbin(targetfile, build_dir, extra_args)

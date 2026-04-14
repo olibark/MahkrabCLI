@@ -35,6 +35,12 @@ def parse_args(argv: list[str] | None = None) -> ap.Namespace:
         help='Output file name',
     )
     parser.add_argument(
+        '--build-dir',
+        dest='buildDir',
+        type=str, metavar='<dir>',
+        help='Directory for compiled binaries (default: build)',
+    )
+    parser.add_argument(
         '--cwd',
         type=str, metavar='<dir>',
         help='Working directory override',

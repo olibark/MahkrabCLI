@@ -13,11 +13,33 @@ def run(run_cmd: list[str]) -> None:
         text=True,
     )
 
-def execbin(targetfile: str, programArgs: list[str] | None = None) -> None:
+def resolve_binary_path(targetfile: str, buildDir: str) -> str:
+    binary_name = os.path.basename(targetfile)
+    candidates = [
+        os.path.join(buildDir, binary_name),
+        os.path.join(buildDir, targetfile) if not os.path.isabs(targetfile) else None,
+        targetfile,
+    ]
+    candidates = [candidate for candidate in candidates if candidate]
+
+    if c.osName == "windows":
+        exe_candidates = []
+        for candidate in candidates:
+            exe_candidates.append(candidate)
+            if not candidate.endswith('.exe'):
+                exe_candidates.append(f'{candidate}.exe')
+        candidates = exe_candidates
+
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+
+    return candidates[0]
+
+def execbin(targetfile: str, buildDir: str = "build", programArgs: list[str] | None = None) -> None:
     try: 
         extraArgs = programArgs or []
-        build_path = os.path.join("build", targetfile)
-        run_path = build_path if os.path.exists(build_path) else targetfile
+        run_path = resolve_binary_path(targetfile, buildDir)
         
         if c.osName == "windows":
             run_cmd = [run_path]

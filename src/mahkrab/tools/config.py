@@ -135,7 +135,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
     else:
         cwdPath = invocationDir
 
-    buildDir = str(configData.get('build_dir', 'build'))
+    buildDir = str(getattr(args, 'buildDir', None) or configData.get('build_dir', 'build'))
     outputfile = getattr(args, 'output', None) or configData.get('output')
     if outputfile is None and resolvedTargetfile:
         filename = Path(resolvedTargetfile).stem
