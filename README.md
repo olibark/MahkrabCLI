@@ -76,7 +76,10 @@ Useful options:
 - `-o, --output <file>`: output path/name for compiled targets
 - `--build-dir <dir>`: build output directory (default: `build`)
 - `--python <python>`: override Python interpreter for `.py`
+- `--lang <language>`: force a language handler instead of using file extension
+- `--tool <tool>`: override the compiler/interpreter executable
 - `--program-args ...`: extra compiler/interpreter args
+- `-e, --explain`: print the resolved execution plan before running
 - `-r, --run-on-compile`: compile then run (compiled languages)
 - `-c, --clear`: clear terminal before action
 - `-v, --version`: show version
@@ -87,6 +90,7 @@ Example commands:
 ```bash
 mk main.cpp --build-dir out -o out/main -r
 mk script.py --python python3
+mk README.md --lang python --tool python3.12 --explain
 mk run --cwd ./examples
 mk app.go --program-args "-trimpath" -r
 ```
@@ -110,6 +114,8 @@ build_dir = "build"
 output = "build/main"
 python = "python3"
 python_cmd = "python3"
+lang = "python"
+tool = "python3.12"
 run_on_compile = true
 clear = false
 program_args = ["-O2"]
@@ -124,7 +130,14 @@ Notes:
 - Relative paths in config are resolved from the config location.
 - `mk run` currently forces compile-and-run behavior (`run_on_compile = true` at runtime).
 - `.mkconfig` is also parsed as TOML.
-- `lang` and `tool` values can be parsed from config/CLI, but are not currently applied by executors.
+- CLI values win over config values for `lang`, `tool`, and other runtime settings.
+- `tool` replaces the executable used to invoke the selected compiler/interpreter. For Java this affects the compile step (`javac`-side), not the `java` runtime command.
+
+## `--lang`, `--tool`, and `--explain`
+
+- `--lang` lets you force a handler even when the file extension would normally map somewhere else. Example: `mk README.md --lang python`.
+- `--tool` replaces the underlying executable token for the selected handler. Example: `mk main.cpp --tool clang++`.
+- `--explain` prints the resolved target, cwd, config path, chosen language source (`extension` or `override`), output path, tool override, and the concrete command(s) that will be executed, then continues with the normal run.
 
 ## Tool detection and external dependencies
 
@@ -171,7 +184,7 @@ There is also a binary run path for targets with no extension (or `.exe`).
 
 - Focus is convenience for small projects and standalone files, not full project orchestration.
 - Behavior depends on external tools being installed and available.
-- Assembly flow is currently Unix-like only (`.asm` is not supported on Windows in current code).
+- Assembly is currently Unix-like only (`.asm` is not supported on Windows in current code).
 - C/C++ dependency flags are limited, no current auto-discovery system
 
 ## Development

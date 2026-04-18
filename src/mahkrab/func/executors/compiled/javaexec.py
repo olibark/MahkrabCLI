@@ -3,6 +3,7 @@ import argparse as ap
 
 from mahkrab import constants as c
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
+from mahkrab.tools.tooloverride import apply_tool_override
 
 class Executor:
     @staticmethod
@@ -11,7 +12,7 @@ class Executor:
         classname = os.path.splitext(os.path.basename(full_path))[0]
         out_dir = os.path.dirname(outputfile) or "build"
         
-        cmd = [c.JAVAC_PATH, *extraArgs, "-d", out_dir, full_path]
+        cmd = apply_tool_override([c.JAVAC_PATH, *extraArgs, "-d", out_dir, full_path], args)
         run_cmd = [c.JAVA_PATH, "-cp", out_dir, classname]
         
         try:

@@ -3,6 +3,7 @@ import argparse as ap
 
 from mahkrab.tools.decorators.timers import compileruntime, compiletime
 from mahkrab import constants as c
+from mahkrab.tools.tooloverride import apply_tool_override
 
 class Executor:
     @staticmethod
@@ -16,7 +17,7 @@ class Executor:
             
         objfile = f"{outputfile}.o"
         extraArgs = list(getattr(args, 'programArgs', []))
-        cmd = [c.NASM_PATH, *extraArgs, "-f", "elf64", full_path, "-o", objfile]
+        cmd = apply_tool_override([c.NASM_PATH, *extraArgs, "-f", "elf64", full_path, "-o", objfile], args)
         
         try:
             if runOnCompile:

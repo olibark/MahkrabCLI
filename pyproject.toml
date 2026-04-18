@@ -26,3 +26,6 @@ mahkrab = ["assets/*.txt"]
 
 [project.urls]
 Homepage = "https://github.com/olibark/MahkrabCLI"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
