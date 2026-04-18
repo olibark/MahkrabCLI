@@ -40,3 +40,5 @@ tests/
 .mkconfig
 demo/
 PUBLISHING.md
+dev/
+user/

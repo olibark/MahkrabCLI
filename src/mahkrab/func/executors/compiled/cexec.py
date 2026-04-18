@@ -4,6 +4,7 @@ import argparse as ap
 from mahkrab.tools.c import findDependencies
 from mahkrab import constants as c
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
+from mahkrab.tools.tooloverride import apply_tool_override
 
 class Executor:
     @staticmethod
@@ -20,7 +21,7 @@ class Executor:
         flags = Executor.findFlags(full_path)
         extraArgs = list(getattr(args, 'programArgs', []))
         
-        cmd = [c.GCC_PATH, full_path]
+        cmd = apply_tool_override([c.GCC_PATH, full_path], args)
         
         if flags:
             cmd.extend(flags)

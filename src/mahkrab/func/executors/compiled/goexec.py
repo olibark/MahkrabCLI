@@ -3,6 +3,7 @@ import argparse as ap
 
 from mahkrab import constants as c
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
+from mahkrab.tools.tooloverride import apply_tool_override
 
 class Executor:
     @staticmethod
@@ -11,7 +12,7 @@ class Executor:
             outputfile += ".exe"
         
         extraArgs = list(getattr(args, 'programArgs', []))
-        cmd = [c.GO_PATH, "build", *extraArgs, "-o", outputfile, full_path]
+        cmd = apply_tool_override([c.GO_PATH, "build", *extraArgs, "-o", outputfile, full_path], args)
         
         try:
             if runOnCompile:
