@@ -77,9 +77,6 @@ LANGUAGE_ALIASES = {
     'matlab': 'matlab',
     'go': 'go',
     'golang': 'go',
-    'assembly': 'assembly',
-    'asm': 'assembly',
-    'nasm': 'assembly',
     'php': 'php',
     'ada': 'ada',
     'swift': 'swift',
@@ -103,6 +100,7 @@ LANGUAGE_ALIASES = {
     'bin': 'binary',
     'executable': 'binary',
 }
+LANGUAGE_ALIASES.update(asmexec.get_language_aliases())
 
 LANGUAGE_LABELS = {
     'python': 'Python',
@@ -123,6 +121,8 @@ LANGUAGE_LABELS = {
     'matlab': 'MATLAB',
     'go': 'Go',
     'assembly': 'Assembly',
+    'assembly_nasm': 'Assembly (NASM)',
+    'assembly_gas': 'Assembly (GNU assembler)',
     'php': 'PHP',
     'ada': 'Ada',
     'swift': 'Swift',
@@ -164,7 +164,6 @@ EXTENSION_LANGUAGE_MAP = {
     '.rs': 'rust',
     '.m': 'matlab',
     '.go': 'go',
-    '.asm': 'assembly',
     '.php': 'php',
     '.adb': 'ada',
     '.ada': 'ada',
@@ -184,52 +183,79 @@ EXTENSION_LANGUAGE_MAP = {
     '': 'binary',
     '.exe': 'binary',
 }
+EXTENSION_LANGUAGE_MAP.update(asmexec.get_extension_language_map())
 
 
-def getExtraArgs(args: ap.Namespace) -> list[str]:
+def getCompileArgs(args: ap.Namespace) -> list[str]:
+    return list(getattr(args, 'compileArgs', []))
+
+
+def getProgramArgs(args: ap.Namespace) -> list[str]:
     return list(getattr(args, 'programArgs', []))
 
 
-def native_run_cmd(outputfile: str) -> list[str]:
+def native_run_cmd(outputfile: str, program_args: list[str] | None = None) -> list[str]:
     if c.osName != 'windows' and os.path.isabs(outputfile):
-        return [outputfile]
+        run_cmd = [outputfile]
+    elif c.osName == 'windows':
+        run_cmd = [outputfile]
+    else:
+        run_cmd = [f'./{outputfile}']
 
+    if program_args:
+        run_cmd.extend(program_args)
+
+    return run_cmd
+
+
+def mono_run_cmd(outputfile: str, program_args: list[str] | None = None) -> list[str]:
     if c.osName == 'windows':
-        return [outputfile]
+        run_cmd = [outputfile]
+    elif os.path.isabs(outputfile):
+        run_cmd = [outputfile]
+    else:
+        run_cmd = [c.MONO_PATH, outputfile]
 
-    return [f'./{outputfile}']
+    if program_args:
+        run_cmd.extend(program_args)
 
-
-def mono_run_cmd(outputfile: str) -> list[str]:
-    if c.osName == 'windows':
-        return [outputfile]
-
-    if os.path.isabs(outputfile):
-        return [outputfile]
-
-    return [c.MONO_PATH, outputfile]
+    return run_cmd
 
 
-def matlab_run_cmd(full_path: str, extra_args: list[str]) -> list[str]:
+def matlab_run_cmd(full_path: str, compile_args: list[str]) -> list[str]:
     escaped = full_path.replace("'", "''")
-    return [c.MATLAB_PATH, *extra_args, '-batch', f"run('{escaped}')"]
+    return [c.MATLAB_PATH, *compile_args, '-batch', f"run('{escaped}')"]
 
 
-def get_interpret_map(full_path: str, extra_args: list[str], args: ap.Namespace) -> dict[str, tuple[list[str], str]]:
+def prolog_run_cmd(full_path: str, compile_args: list[str], program_args: list[str]) -> list[str]:
+    run_cmd = [c.SWIPL_PATH, *compile_args, '-q', '-s', full_path, '-t', 'halt']
+    if program_args:
+        run_cmd.extend(['--', *program_args])
+
+    return run_cmd
+
+
+def get_interpret_map(
+        full_path: str,
+        compile_args: list[str],
+        program_args: list[str],
+        args: ap.Namespace,
+    ) -> dict[str, tuple[list[str], str]]:
+
     return {
-        'javascript': (apply_tool_override([c.NODE_PATH, *extra_args, full_path], args), 'node'),
-        'typescript': (apply_tool_override([c.TS_NODE_PATH, *extra_args, full_path], args), 'ts-node'),
-        'ruby': (apply_tool_override([c.RUBY_PATH, *extra_args, full_path], args), 'ruby'),
-        'php': (apply_tool_override([c.PHP_PATH, *extra_args, full_path], args), 'php'),
-        'lua': (apply_tool_override([c.LUA_PATH, *extra_args, full_path], args), 'lua'),
-        'bash': (apply_tool_override([c.BASH_PATH, *extra_args, full_path], args), 'bash'),
-        'powershell': (apply_tool_override([c.PWSH_PATH, *extra_args, '-File', full_path], args), 'pwsh'),
-        'perl': (apply_tool_override([c.PERL_PATH, *extra_args, full_path], args), 'perl'),
-        'r': (apply_tool_override([c.RSCRIPT_PATH, *extra_args, full_path], args), 'Rscript'),
-        'scratch': (apply_tool_override([c.TURBOWARP_PATH, *extra_args, 'run', full_path], args), 'twcli'),
-        'matlab': (apply_tool_override(matlab_run_cmd(full_path, extra_args), args), 'matlab'),
-        'prolog': (apply_tool_override([c.SWIPL_PATH, *extra_args, '-q', '-s', full_path, '-t', 'halt'], args), 'swipl'),
-        'dart': (apply_tool_override([c.DART_PATH, *extra_args, full_path], args), 'dart'),
+        'javascript': (apply_tool_override([c.NODE_PATH, *compile_args, full_path, *program_args], args), 'node'),
+        'typescript': (apply_tool_override([c.TS_NODE_PATH, *compile_args, full_path, *program_args], args), 'ts-node'),
+        'ruby': (apply_tool_override([c.RUBY_PATH, *compile_args, full_path, *program_args], args), 'ruby'),
+        'php': (apply_tool_override([c.PHP_PATH, *compile_args, full_path, *program_args], args), 'php'),
+        'lua': (apply_tool_override([c.LUA_PATH, *compile_args, full_path, *program_args], args), 'lua'),
+        'bash': (apply_tool_override([c.BASH_PATH, *compile_args, full_path, *program_args], args), 'bash'),
+        'powershell': (apply_tool_override([c.PWSH_PATH, *compile_args, '-File', full_path, *program_args], args), 'pwsh'),
+        'perl': (apply_tool_override([c.PERL_PATH, *compile_args, full_path, *program_args], args), 'perl'),
+        'r': (apply_tool_override([c.RSCRIPT_PATH, *compile_args, full_path, *program_args], args), 'Rscript'),
+        'scratch': (apply_tool_override([c.TURBOWARP_PATH, *compile_args, 'run', full_path], args), 'twcli'),
+        'matlab': (apply_tool_override(matlab_run_cmd(full_path, compile_args), args), 'matlab'),
+        'prolog': (apply_tool_override(prolog_run_cmd(full_path, compile_args, program_args), args), 'swipl'),
+        'dart': (apply_tool_override([c.DART_PATH, *compile_args, full_path, *program_args], args), 'dart'),
     }
 
 
@@ -244,54 +270,61 @@ def get_compile_map() -> dict[str, object]:
     }
 
 
-def get_command_compile_map(full_path: str, outputfile: str, extra_args: list[str], args: ap.Namespace) -> dict[str, tuple[list[str], list[str], str]]:
+def get_command_compile_map(
+        full_path: str,
+        outputfile: str,
+        compile_args: list[str],
+        program_args: list[str],
+        args: ap.Namespace,
+    ) -> dict[str, tuple[list[str], list[str], str]]:
+
     exe_output = outputfile if outputfile.endswith('.exe') else f'{outputfile}.exe'
     jar_output = outputfile if outputfile.endswith('.jar') else f'{outputfile}.jar'
 
     return {
         'csharp': (
-            apply_tool_override([c.CSC_PATH, *extra_args, '-nologo', f'-out:{exe_output}', full_path], args),
-            mono_run_cmd(exe_output),
+            apply_tool_override([c.CSC_PATH, *compile_args, '-nologo', f'-out:{exe_output}', full_path], args),
+            mono_run_cmd(exe_output, program_args),
             'C#',
         ),
         'visual_basic': (
-            apply_tool_override([c.VBC_PATH, *extra_args, '-nologo', f'-out:{exe_output}', full_path], args),
-            mono_run_cmd(exe_output),
+            apply_tool_override([c.VBC_PATH, *compile_args, '-nologo', f'-out:{exe_output}', full_path], args),
+            mono_run_cmd(exe_output, program_args),
             'Visual Basic',
         ),
         'pascal': (
-            apply_tool_override([c.FPC_PATH, *extra_args, f'-o{outputfile}', full_path], args),
-            native_run_cmd(outputfile),
+            apply_tool_override([c.FPC_PATH, *compile_args, f'-o{outputfile}', full_path], args),
+            native_run_cmd(outputfile, program_args),
             'Free Pascal',
         ),
         'fortran': (
-            apply_tool_override([c.GFORTRAN_PATH, *extra_args, full_path, '-o', outputfile], args),
-            native_run_cmd(outputfile),
+            apply_tool_override([c.GFORTRAN_PATH, *compile_args, full_path, '-o', outputfile], args),
+            native_run_cmd(outputfile, program_args),
             'gfortran',
         ),
         'ada': (
-            apply_tool_override([c.GNATMAKE_PATH, *extra_args, full_path, '-o', outputfile], args),
-            native_run_cmd(outputfile),
+            apply_tool_override([c.GNATMAKE_PATH, *compile_args, full_path, '-o', outputfile], args),
+            native_run_cmd(outputfile, program_args),
             'gnatmake',
         ),
         'swift': (
-            apply_tool_override([c.SWIFTC_PATH, *extra_args, full_path, '-o', outputfile], args),
-            native_run_cmd(outputfile),
+            apply_tool_override([c.SWIFTC_PATH, *compile_args, full_path, '-o', outputfile], args),
+            native_run_cmd(outputfile, program_args),
             'swiftc',
         ),
         'kotlin': (
-            apply_tool_override([c.KOTLINC_PATH, *extra_args, full_path, '-include-runtime', '-d', jar_output], args),
-            [c.JAVA_PATH, '-jar', jar_output],
+            apply_tool_override([c.KOTLINC_PATH, *compile_args, full_path, '-include-runtime', '-d', jar_output], args),
+            [c.JAVA_PATH, '-jar', jar_output, *program_args],
             'kotlinc',
         ),
         'classic_visual_basic': (
-            apply_tool_override([c.FBC_PATH, *extra_args, full_path, '-x', outputfile], args),
-            native_run_cmd(outputfile),
+            apply_tool_override([c.FBC_PATH, *compile_args, full_path, '-x', outputfile], args),
+            native_run_cmd(outputfile, program_args),
             'fbc',
         ),
         'cobol': (
-            apply_tool_override([c.COBC_PATH, *extra_args, '-x', '-o', outputfile, full_path], args),
-            native_run_cmd(outputfile),
+            apply_tool_override([c.COBC_PATH, *compile_args, '-x', '-o', outputfile, full_path], args),
+            native_run_cmd(outputfile, program_args),
             'cobc',
         ),
     }
@@ -347,9 +380,12 @@ def print_explain(args: ap.Namespace, plan: dict[str, object]) -> None:
     elif getattr(args, 'tool', None):
         print(f"  tool override: {getattr(args, 'tool')}")
     print(f"  run on compile: {bool(getattr(args, 'runOnCompile', False))}")
-    print(f"  program args: {format_command(list(getattr(args, 'programArgs', [])))}")
+    print(f"  compile args: {format_command(getCompileArgs(args))}")
+    print(f"  program args: {format_command(getProgramArgs(args))}")
     if plan.get('compile_cmd'):
         print(f"  compile command: {format_command(plan['compile_cmd'])}")
+    if plan.get('link_cmd'):
+        print(f"  link command: {format_command(plan['link_cmd'])}")
     if plan.get('run_cmd'):
         print(f"  run command: {format_command(plan['run_cmd'])}")
     print()
@@ -358,8 +394,9 @@ def print_explain(args: ap.Namespace, plan: dict[str, object]) -> None:
 def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Namespace, runOnCompile: bool) -> dict[str, object] | None:
     full_path = os.path.abspath(targetfile)
     ext = os.path.splitext(targetfile)[1].lower()
-    extra_args = getExtraArgs(args)
-    build_dir = getattr(args, 'buildDir', 'build')
+    compile_args = getCompileArgs(args)
+    program_args = getProgramArgs(args)
+    build_dir = getattr(args, 'buildDir', None) or 'build'
 
     if not outputfile:
         filename = os.path.splitext(os.path.basename(targetfile))[0]
@@ -380,9 +417,9 @@ def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Names
             )
         return None
 
-    interpret_map = get_interpret_map(full_path, extra_args, args)
+    interpret_map = get_interpret_map(full_path, compile_args, program_args, args)
     compile_map = get_compile_map()
-    command_compile_map = get_command_compile_map(full_path, outputfile, extra_args, args)
+    command_compile_map = get_command_compile_map(full_path, outputfile, compile_args, program_args, args)
 
     if language_key == 'python':
         tool_override = get_tool_override(args)
@@ -396,33 +433,40 @@ def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Names
             'targetfile': full_path,
             'outputfile': None,
             'compile_cmd': None,
-            'run_cmd': [*tool_override, '-u', *extra_args, full_path] if tool_override else [python_cmd, '-u', *extra_args, full_path],
+            'run_cmd': [*tool_override, '-u', *compile_args, full_path, *program_args] if tool_override else [python_cmd, '-u', *compile_args, full_path, *program_args],
         }
 
-    if language_key in compile_map:
+    if language_key in compile_map or asmexec.is_assembly_language(language_key):
         compile_cmd = None
+        link_cmd = None
         run_cmd = None
         if language_key == 'c':
-            compile_cmd = apply_tool_override([c.GCC_PATH, full_path, *cexec.Executor.findFlags(full_path), *extra_args, '-o', outputfile], args)
-            run_cmd = native_run_cmd(outputfile)
+            compile_cmd = apply_tool_override([c.GCC_PATH, full_path, *cexec.Executor.findFlags(full_path), *compile_args, '-o', outputfile], args)
+            run_cmd = native_run_cmd(outputfile, program_args)
         elif language_key == 'cpp':
-            compile_cmd = apply_tool_override([c.GPP_PATH, full_path, *cppexec.Executor.findFlags(full_path), *extra_args, '-o', outputfile], args)
-            run_cmd = native_run_cmd(outputfile)
+            compile_cmd = apply_tool_override([c.GPP_PATH, full_path, *cppexec.Executor.findFlags(full_path), *compile_args, '-o', outputfile], args)
+            run_cmd = native_run_cmd(outputfile, program_args)
         elif language_key == 'rust':
-            compile_cmd = apply_tool_override([c.RUSTC_PATH, full_path, *extra_args, '-o', outputfile], args)
-            run_cmd = native_run_cmd(outputfile)
+            compile_cmd = apply_tool_override([c.RUSTC_PATH, full_path, *compile_args, '-o', outputfile], args)
+            run_cmd = native_run_cmd(outputfile, program_args)
         elif language_key == 'go':
-            compile_cmd = apply_tool_override([c.GO_PATH, 'build', *extra_args, '-o', outputfile, full_path], args)
-            run_cmd = native_run_cmd(outputfile)
+            compile_cmd = apply_tool_override([c.GO_PATH, 'build', *compile_args, '-o', outputfile, full_path], args)
+            run_cmd = native_run_cmd(outputfile, program_args)
         elif language_key == 'java':
             classname = os.path.splitext(os.path.basename(full_path))[0]
             out_dir = os.path.dirname(outputfile) or 'build'
-            compile_cmd = apply_tool_override([c.JAVAC_PATH, *extra_args, '-d', out_dir, full_path], args)
-            run_cmd = [c.JAVA_PATH, '-cp', out_dir, classname]
-        elif language_key == 'assembly':
-            objfile = f'{outputfile}.o'
-            compile_cmd = apply_tool_override([c.NASM_PATH, *extra_args, '-f', 'elf64', full_path, '-o', objfile], args)
-            run_cmd = native_run_cmd(outputfile)
+            compile_cmd = apply_tool_override([c.JAVAC_PATH, *compile_args, '-d', out_dir, full_path], args)
+            run_cmd = [c.JAVA_PATH, '-cp', out_dir, classname, *program_args]
+        elif asmexec.is_assembly_language(language_key):
+            assembly_plan = asmexec.build_plan(full_path, outputfile, args, runOnCompile, language_key)
+            if assembly_plan is None:
+                return None
+
+            language_key = str(assembly_plan['language_key'])
+            compile_cmd = list(assembly_plan['compile_cmd'])
+            link_cmd = list(assembly_plan['link_cmd'])
+            outputfile = str(assembly_plan['outputfile'])
+            run_cmd = list(assembly_plan['run_cmd']) if assembly_plan['run_cmd'] else None
 
         return {
             'kind': 'compiled_executor',
@@ -433,8 +477,9 @@ def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Names
             'targetfile': full_path,
             'outputfile': outputfile,
             'compile_cmd': compile_cmd,
+            'link_cmd': link_cmd,
             'run_cmd': run_cmd if runOnCompile else None,
-            'executor': compile_map[language_key],
+            'executor': asmexec.Executor if asmexec.is_assembly_language(language_key) else compile_map[language_key],
         }
 
     if language_key in command_compile_map:
@@ -448,6 +493,7 @@ def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Names
             'targetfile': full_path,
             'outputfile': outputfile,
             'compile_cmd': cmd,
+            'link_cmd': None,
             'run_cmd': run_cmd if runOnCompile else None,
             'tool_name': _tool_name,
         }
@@ -464,7 +510,8 @@ def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Names
             'targetfile': full_path,
             'outputfile': None,
             'compile_cmd': None,
-            'run_cmd': [*tool_override, *extra_args, ':memory:'] if tool_override else [sqlite_cmd, *extra_args, ':memory:'],
+            'link_cmd': None,
+            'run_cmd': [*tool_override, *compile_args, ':memory:'] if tool_override else [sqlite_cmd, *compile_args, ':memory:'],
         }
 
     if language_key in interpret_map:
@@ -478,6 +525,7 @@ def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Names
             'targetfile': full_path,
             'outputfile': None,
             'compile_cmd': None,
+            'link_cmd': None,
             'run_cmd': run_cmd,
             'tool_name': tool_name,
         }
@@ -491,7 +539,7 @@ def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Names
         else:
             run_cmd = [f'./{run_path}']
 
-        run_cmd.extend(extra_args)
+        run_cmd.extend(program_args)
 
         return {
             'kind': 'binary',
@@ -502,6 +550,7 @@ def build_execution_plan(targetfile: str, outputfile: str | None, args: ap.Names
             'targetfile': full_path,
             'outputfile': None,
             'compile_cmd': None,
+            'link_cmd': None,
             'run_cmd': run_cmd,
         }
 
@@ -529,6 +578,7 @@ def run(targetfile: str, outputfile: str | None, args: ap.Namespace, runOnCompil
 
     kind = plan['kind']
     full_path = str(plan['targetfile'])
+    setattr(args, 'resolvedLanguage', plan.get('language_key'))
 
     if kind == 'python':
         pyexec.Executor.exec(full_path, str(outputfile or ''), args)
@@ -546,4 +596,4 @@ def run(targetfile: str, outputfile: str | None, args: ap.Namespace, runOnCompil
     elif kind == 'interpreted':
         interpexec.Executor.exec(list(plan['run_cmd']), str(plan['tool_name']), args)
     elif kind == 'binary':
-        binexec.execbin(targetfile, getattr(args, 'buildDir', 'build'), getExtraArgs(args))
+        binexec.execbin(targetfile, getattr(args, 'buildDir', None) or 'build', getProgramArgs(args))

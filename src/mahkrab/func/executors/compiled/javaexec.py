@@ -8,12 +8,13 @@ from mahkrab.tools.tooloverride import apply_tool_override
 class Executor:
     @staticmethod
     def exec(full_path: str, outputfile: str, args: ap.Namespace, runOnCompile: bool) -> None:
-        extraArgs = list(getattr(args, 'programArgs', []))
+        compileArgs = list(getattr(args, 'compileArgs', []))
+        programArgs = list(getattr(args, 'programArgs', []))
         classname = os.path.splitext(os.path.basename(full_path))[0]
         out_dir = os.path.dirname(outputfile) or "build"
         
-        cmd = apply_tool_override([c.JAVAC_PATH, *extraArgs, "-d", out_dir, full_path], args)
-        run_cmd = [c.JAVA_PATH, "-cp", out_dir, classname]
+        cmd = apply_tool_override([c.JAVAC_PATH, *compileArgs, "-d", out_dir, full_path], args)
+        run_cmd = [c.JAVA_PATH, "-cp", out_dir, classname, *programArgs]
         
         try:
             if runOnCompile:

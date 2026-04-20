@@ -21,10 +21,10 @@ class Executor:
 
     @staticmethod
     def exec(full_path: str, outputfile: str, args: ap.Namespace) -> None:
-        programArgs = list(getattr(args, 'programArgs', []))
+        compileArgs = list(getattr(args, 'compileArgs', []))
         toolOverride = get_tool_override(args)
         sqliteCmd = toolOverride[0] if toolOverride else c.SQLITE3_PATH
-        run_cmd = [*toolOverride, *programArgs, ':memory:'] if toolOverride else [sqliteCmd, *programArgs, ':memory:']
+        run_cmd = [*toolOverride, *compileArgs, ':memory:'] if toolOverride else [sqliteCmd, *compileArgs, ':memory:']
 
         try:
             Executor.run(full_path, run_cmd)

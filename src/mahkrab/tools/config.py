@@ -25,6 +25,7 @@ class Settings:
     explain: bool = False
     buildDir: str = 'build'
     env: dict[str, str] = field(default_factory=dict)
+    compileArgs: list[str] = field(default_factory=list)
     programArgs: list[str] = field(default_factory=list)
     configPath: str | None = None
 
@@ -160,6 +161,11 @@ def buildSettings(args: ap.Namespace) -> Settings:
     if isinstance(envData, dict):
         env = {str(key): str(value) for key, value in envData.items()}
 
+    compileArgs = (
+        toStringList(configData.get('compile_args'))
+        + toStringList(configData.get('tool_args'))
+        + list(getattr(args, 'compileArgs', []))
+    )
     programArgs = (
         toStringList(configData.get('program_args'))
         + list(getattr(args, 'programArgs', []))
@@ -179,6 +185,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
         explain=bool(getattr(args, 'explain', False)),
         buildDir=buildDir,
         env=env,
+        compileArgs=compileArgs,
         programArgs=programArgs,
         configPath=str(configPath) if configPath else None,
     )

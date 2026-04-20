@@ -8,6 +8,8 @@ osName = findOS()
 
 GCC_PATH = os.environ.get("MAHKRAB_GCC", "gcc")
 NASM_PATH = os.environ.get("MAHKRAB_NASM", "nasm")
+AS_PATH = os.environ.get("MAHKRAB_AS", "as")
+LD_PATH = os.environ.get("MAHKRAB_LD", "ld")
 PYTHON_PATH = os.environ.get("MAHKRAB_PYTHON", sys.executable)
 GPP_PATH = os.environ.get("MAHKRAB_GPP", "g++")
 RUSTC_PATH = os.environ.get("MAHKRAB_RUSTC", "rustc")

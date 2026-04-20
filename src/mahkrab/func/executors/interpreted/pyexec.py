@@ -20,9 +20,10 @@ class Executor:
     def exec(targetfile: str, outputfile: str, args: ap.Namespace) -> None:
         full_path = os.path.abspath(targetfile)
         toolOverride = get_tool_override(args)
+        compileArgs = list(getattr(args, 'compileArgs', []))
         programArgs = list(getattr(args, 'programArgs', []))
         pythonCmd = str(getattr(args, 'pythonCmd', c.PYTHON_PATH))
-        run_cmd = [*toolOverride, '-u', *programArgs, full_path] if toolOverride else [pythonCmd, '-u', *programArgs, full_path]
+        run_cmd = [*toolOverride, '-u', *compileArgs, full_path, *programArgs] if toolOverride else [pythonCmd, '-u', *compileArgs, full_path, *programArgs]
         
         try:
             Executor.run(run_cmd)
