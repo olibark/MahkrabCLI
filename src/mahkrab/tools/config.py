@@ -117,7 +117,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
     entry = configData.get('entry')
     explicitTargetfile = getattr(args, 'targetfile', None)
     targetfile = explicitTargetfile
-    if command == 'run' and not explicitTargetfile:
+    if command in ('build', 'run') and not explicitTargetfile:
         targetfile = entry
 
     resolvedTargetfile = None
@@ -131,7 +131,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
         cwdPath = resolvePath(str(argsCwd), invocationDir)
     elif configCwd:
         cwdPath = resolvePath(str(configCwd), rootDir)
-    elif command == 'run' and configPath is not None:
+    elif command in ('build', 'run') and configPath is not None:
         cwdPath = rootDir
     else:
         cwdPath = invocationDir
@@ -155,6 +155,8 @@ def buildSettings(args: ap.Namespace) -> Settings:
     )
     if command == 'run':
         runOnCompile = True
+    elif command == 'build':
+        runOnCompile = False
 
     envData = configData.get('env', {})
     env = {}

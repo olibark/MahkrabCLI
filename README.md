@@ -10,6 +10,7 @@ It is a cross-language source runner and compile-and-run helper for small files 
 
 - `mk <file>` to run/interpret or compile a source file by extension
 - `mk run` to run the configured entry from `.mkconfig.toml` or `.mkconfig`
+- `mk build` to compile the configured entry without running it
 
 The goal is reducing friction when switching between languages.
 
@@ -54,10 +55,17 @@ Then run:
 mk run
 ```
 
+Or compile the configured entry without running it:
+
+```bash
+mk build
+```
+
 You can also point to a specific config file:
 
 ```bash
 mk run --config /path/to/.mkconfig.toml
+mk build --config /path/to/.mkconfig.toml
 ```
 
 ## Usage
@@ -67,6 +75,7 @@ Basic forms:
 ```bash
 mk <file>
 mk run
+mk build
 ```
 
 Useful options:
@@ -93,6 +102,7 @@ mk main.cpp --build-dir out -o out/main -r
 mk script.py --python python3
 mk README.md --lang python --tool python3.12 --explain
 mk run --cwd ./examples
+mk build --cwd ./examples
 mk app.go --compile-args "-trimpath" -r
 mk main.c -r --program-args -- hello world
 mk hello.asm -r
@@ -102,7 +112,7 @@ mk hello.asm --lang gas --explain
 
 ## Config (`.mkconfig.toml` / `.mkconfig`)
 
-`mk run` reads TOML config and resolves an entry file.
+`mk run` and `mk build` read TOML config and resolve an entry file.
 
 Auto-discovery checks current directory and parent directories for:
 
@@ -132,9 +142,10 @@ MY_VAR = "value"
 
 Notes:
 
-- `entry` is required for `mk run`.
+- `entry` is required for `mk run` and `mk build`.
 - Relative paths in config are resolved from the config location.
 - `mk run` currently forces compile-and-run behavior (`run_on_compile = true` at runtime).
+- `mk build` forces compile-only behavior and exits with the compiler/build exit code.
 - `.mkconfig` is also parsed as TOML.
 - CLI values win over config values for `lang`, `tool`, and other runtime settings.
 - `compile_args` are passed to the compiler or interpreter command.

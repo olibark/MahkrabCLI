@@ -1,5 +1,6 @@
 import os
 import shlex
+import subprocess
 import argparse as ap
 
 from mahkrab import constants as c
@@ -597,3 +598,65 @@ def run(targetfile: str, outputfile: str | None, args: ap.Namespace, runOnCompil
         interpexec.Executor.exec(list(plan['run_cmd']), str(plan['tool_name']), args)
     elif kind == 'binary':
         binexec.execbin(targetfile, getattr(args, 'buildDir', None) or 'build', getProgramArgs(args))
+
+
+def build(targetfile: str, outputfile: str | None, args: ap.Namespace) -> int:
+    if not targetfile:
+        print(
+            f"{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} "
+            f"{c.Colours.RED}Error:{c.Colours.ENDC} No target file specified."
+        )
+        return 2
+
+    plan = build_execution_plan(targetfile, outputfile, args, False)
+    if plan is None:
+        return 2
+
+    if getattr(args, 'explain', False):
+        print_explain(args, plan)
+
+    compile_cmd = plan.get('compile_cmd')
+    if not compile_cmd:
+        print(
+            f"{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} "
+            f"{c.Colours.RED}Error:{c.Colours.ENDC} No build step available for {plan['language']}."
+        )
+        return 2
+
+    try:
+        if plan['kind'] == 'compiled_executor':
+            setattr(args, 'resolvedLanguage', plan.get('language_key'))
+            link_cmd = plan.get('link_cmd')
+            if link_cmd:
+                plan['executor'].compile(list(compile_cmd), list(link_cmd))
+            else:
+                plan['executor'].compile(list(compile_cmd))
+        elif plan['kind'] == 'command_compile':
+            cmdexec.Executor.compile(list(compile_cmd))
+        else:
+            print(
+                f"{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} "
+                f"{c.Colours.RED}Error:{c.Colours.ENDC} No build step available for {plan['language']}."
+            )
+            return 2
+
+    except subprocess.CalledProcessError as e:
+        print(
+            f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+            f"Error:{c.Colours.ENDC} Command failed with return code {c.Colours.RED}{e.returncode}{c.Colours.ENDC}.\n"
+        )
+        return e.returncode
+    except FileNotFoundError:
+        print(
+            f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+            f"Error:{c.Colours.ENDC} Build tool not found in {c.Colours.RED}PATH{c.Colours.ENDC}.\n"
+        )
+        return 127
+    except Exception as e:
+        print(
+            f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
+            f"Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n"
+        )
+        return 1
+
+    return 0

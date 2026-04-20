@@ -4,7 +4,7 @@ import sys
 
 from mahkrab.tools.getversion import get_version
 
-COMMANDS = {'run'}
+COMMANDS = {'build', 'run'}
 SPECIAL_ARG_DESTS = {
     '--compile-args': 'compileArgsRaw',
     '--tool-args': 'compileArgsRaw',
@@ -102,11 +102,12 @@ def parse_args(argv: list[str] | None = None) -> ap.Namespace:
     argv, rawArgValues = preprocessArgv(argv)
     parser = ap.ArgumentParser(
         prog="MAHKRAB-CLI",
+        epilog="Commands: run (compile and run configured entry), build (compile configured entry only).",
     )
     parser.add_argument(
         'target',
         nargs="?",
-        help='Target file name',
+        help='Target file name or command',
     )
     parser.add_argument(
         '-o', '--output',

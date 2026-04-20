@@ -99,7 +99,9 @@ def test_help_flags_exit_successfully(flag: str, capsys) -> None:
         parser.parse_args([flag])
 
     assert error.value.code == 0
-    assert "usage:" in capsys.readouterr().out.lower()
+    output = capsys.readouterr().out.lower()
+    assert "usage:" in output
+    assert "build" in output
 
 
 @pytest.mark.parametrize("flag", ["-v", "--version"])
@@ -130,6 +132,13 @@ def test_run_command_sets_command_instead_of_targetfile() -> None:
     args = parser.parse_args(["run"])
 
     assert args.command == "run"
+    assert args.targetfile is None
+
+
+def test_build_command_sets_command_instead_of_targetfile() -> None:
+    args = parser.parse_args(["build"])
+
+    assert args.command == "build"
     assert args.targetfile is None
 
 

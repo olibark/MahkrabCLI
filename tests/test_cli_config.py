@@ -67,6 +67,28 @@ class TestParserAndConfig(unittest.TestCase):
             self.assertTrue(settings.targetfile.endswith('/src/main.c'))
             self.assertEqual(settings.programArgs, ['-O3'])
 
+    def test_build_command_uses_entry_without_run_on_compile(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            configDir = projectDir / '.mkconfig'
+            sourceDir = projectDir / 'src'
+            configDir.mkdir(parents=True)
+            sourceDir.mkdir(parents=True)
+            (sourceDir / 'main.c').write_text('int main(){return 0;}\n', encoding='utf-8')
+
+            (configDir / '.mkconfig.toml').write_text(
+                'entry = "src/main.c"\nrun_on_compile = true\n',
+                encoding='utf-8',
+            )
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['build'])
+                settings = config.buildSettings(args)
+
+            self.assertEqual(settings.command, 'build')
+            self.assertFalse(settings.runOnCompile)
+            self.assertTrue(settings.targetfile.endswith('/src/main.c'))
+
     def test_cli_python_override_wins_over_config(self) -> None:
         with tempfile.TemporaryDirectory() as tempDir:
             projectDir = Path(tempDir) / 'project'

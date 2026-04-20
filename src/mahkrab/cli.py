@@ -44,7 +44,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     actionTerry = bool(args.terry)
     hasAction = actionRunTarget or actionList or actionOgs or actionTerry
 
-    if args.command == 'run' and not settings.targetfile:
+    if args.command in ('build', 'run') and not settings.targetfile:
         printError("No 'entry' configured in .mkconfig/.mkconfig.toml.")
         return 2
 
@@ -55,11 +55,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         'terry': (actionTerry, terry.terry),
         'targetfile': (
             actionRunTarget,
-            lambda: run.run(
-                settings.targetfile,
-                settings.outputfile,
-                settings,
-                settings.runOnCompile,
+            lambda: (
+                run.build(settings.targetfile, settings.outputfile, settings)
+                if args.command == 'build'
+                else run.run(
+                    settings.targetfile,
+                    settings.outputfile,
+                    settings,
+                    settings.runOnCompile,
+                )
             ),
         ),
         'ogs': (actionOgs, og.ogs),
@@ -68,7 +72,10 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     for _name, (shouldRun, handler) in handlers.items():
         if shouldRun:
-            handler()
+            result = handler()
+            if _name == 'targetfile' and args.command == 'build' and isinstance(result, int):
+                return result
+
             return 0
 
     if settings.clear:

@@ -1,8 +1,10 @@
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from mahkrab.func import run
+from mahkrab.func.executors.compiled import cexec
 from mahkrab.tools import config, parser
 
 
@@ -88,3 +90,34 @@ def test_python_plan_routes_interpreter_and_program_args() -> None:
     assert plan is not None
     assert plan['run_cmd'][1:4] == ['-u', '-X', 'utf8']
     assert plan['run_cmd'][-2:] == [str(Path('script.py').resolve()), 'hello']
+
+
+def test_build_compiles_only(monkeypatch) -> None:
+    settings = config.buildSettings(parser.parse_args(['main.c', '-r']))
+    calls = {}
+
+    monkeypatch.setattr(
+        cexec.Executor,
+        'compile',
+        staticmethod(lambda cmd: calls.setdefault('compile_cmd', cmd)),
+    )
+    monkeypatch.setattr(
+        cexec.Executor,
+        'runOnCompile',
+        staticmethod(lambda cmd, run_cmd: calls.setdefault('run_cmd', run_cmd)),
+    )
+
+    assert run.build(settings.targetfile, settings.outputfile, settings) == 0
+    assert calls['compile_cmd']
+    assert 'run_cmd' not in calls
+
+
+def test_build_returns_compiler_exit_code(monkeypatch) -> None:
+    settings = config.buildSettings(parser.parse_args(['main.c']))
+
+    def fail_compile(cmd: list[str]) -> None:
+        raise subprocess.CalledProcessError(7, cmd)
+
+    monkeypatch.setattr(cexec.Executor, 'compile', staticmethod(fail_compile))
+
+    assert run.build(settings.targetfile, settings.outputfile, settings) == 7

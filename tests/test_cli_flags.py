@@ -55,6 +55,35 @@ def test_cli_runs_targetfile(monkeypatch) -> None:
     }
 
 
+def test_cli_builds_targetfile_and_returns_build_code(monkeypatch) -> None:
+    args = make_args(command="build")
+    settings = make_settings(targetfile="/tmp/main.c", outputfile="build/main", runOnCompile=False)
+    called = {}
+
+    monkeypatch.setattr(cli.parser, "parse_args", lambda argv: args)
+    monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
+    monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
+    monkeypatch.setattr(
+        cli.run,
+        "build",
+        lambda targetfile, outputfile, runtime_settings: called.update(
+            {
+                "targetfile": targetfile,
+                "outputfile": outputfile,
+                "settings": runtime_settings,
+            }
+        )
+        or 7,
+    )
+
+    assert cli.main(["build"]) == 7
+    assert called == {
+        "targetfile": "/tmp/main.c",
+        "outputfile": "build/main",
+        "settings": settings,
+    }
+
+
 def test_cli_runs_list_flag(monkeypatch) -> None:
     args = make_args(list=2)
     settings = make_settings()
@@ -135,6 +164,18 @@ def test_cli_run_command_without_entry_returns_error(monkeypatch, capsys) -> Non
     monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
 
     assert cli.main(["run"]) == 2
+    assert "No 'entry' configured" in capsys.readouterr().out
+
+
+def test_cli_build_command_without_entry_returns_error(monkeypatch, capsys) -> None:
+    args = make_args(command="build")
+    settings = make_settings(targetfile=None)
+
+    monkeypatch.setattr(cli.parser, "parse_args", lambda argv: args)
+    monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
+    monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
+
+    assert cli.main(["build"]) == 2
     assert "No 'entry' configured" in capsys.readouterr().out
 
 

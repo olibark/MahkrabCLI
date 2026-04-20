@@ -134,6 +134,52 @@ else
   fail=$((fail + 1))
 fi
 
+if ensure_tool gcc; then
+  BUILD_PROJECT_DIR="$CASE_DIR/project_build"
+  mkdir -p "$BUILD_PROJECT_DIR/.mkconfig" "$BUILD_PROJECT_DIR/src"
+  cat > "$BUILD_PROJECT_DIR/src/main.c" << 'CEOF'
+#include <stdio.h>
+
+int main(void) {
+  FILE *file = fopen("ran.txt", "w");
+  if (file) {
+    fputs("ran", file);
+    fclose(file);
+  }
+  puts("ran");
+  return 0;
+}
+CEOF
+  cat > "$BUILD_PROJECT_DIR/.mkconfig/.mkconfig.toml" << 'TMLEOF'
+entry = "src/main.c"
+build_dir = "build"
+run_on_compile = true
+TMLEOF
+
+  rm -f "$BUILD_PROJECT_DIR/ran.txt"
+  if (cd "$BUILD_PROJECT_DIR" && run_mk build >/dev/null 2>&1) \
+    && [[ -x "$BUILD_PROJECT_DIR/build/main" ]] \
+    && [[ ! -e "$BUILD_PROJECT_DIR/ran.txt" ]]; then
+    record PASS "mk build compiles configured entry only"
+    pass=$((pass + 1))
+  else
+    record FAIL "mk build compiles configured entry only"
+    fail=$((fail + 1))
+  fi
+
+  if (cd "$BUILD_PROJECT_DIR" && run_mk run >/dev/null 2>&1) \
+    && [[ -e "$BUILD_PROJECT_DIR/ran.txt" ]]; then
+    record PASS "mk run still compiles and runs configured entry"
+    pass=$((pass + 1))
+  else
+    record FAIL "mk run still compiles and runs configured entry"
+    fail=$((fail + 1))
+  fi
+else
+  record SKIP "mk build configured entry (missing gcc)"
+  skip=$((skip + 1))
+fi
+
 # Language matrix (one file per supported extension mapping)
 lang_case "Python" python3 "$CASE_DIR/hello.py" interpreted
 lang_case "C" gcc "$CASE_DIR/hello.c" compiled
