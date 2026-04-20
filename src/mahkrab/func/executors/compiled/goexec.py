@@ -11,8 +11,9 @@ class Executor:
         if c.osName == "windows" and not outputfile.endswith('.exe'):
             outputfile += ".exe"
         
-        extraArgs = list(getattr(args, 'programArgs', []))
-        cmd = apply_tool_override([c.GO_PATH, "build", *extraArgs, "-o", outputfile, full_path], args)
+        compileArgs = list(getattr(args, 'compileArgs', []))
+        programArgs = list(getattr(args, 'programArgs', []))
+        cmd = apply_tool_override([c.GO_PATH, "build", *compileArgs, "-o", outputfile, full_path], args)
         
         try:
             if runOnCompile:
@@ -22,6 +23,8 @@ class Executor:
                     run_cmd = [outputfile]
                 else:
                     run_cmd = [f'./{outputfile}']
+                if programArgs:
+                    run_cmd.extend(programArgs)
                 Executor.runOnCompile(cmd, run_cmd)
             else:
                 Executor.compile(cmd)

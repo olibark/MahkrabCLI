@@ -36,9 +36,15 @@ Thumbs.db
 .git/
 .gitignore
 archive/
-tests/
+tests/**/__pycache__/
+tests/build/
+tests/cli_cases/build/
+tests/cli_cases/project_run/
+tests/cli_cases/results.txt
+tests/cli_cases/hello
 .mkconfig
 demo/
 PUBLISHING.md
 dev/
 user/
+AGENTS.md

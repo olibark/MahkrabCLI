@@ -25,6 +25,7 @@ class Settings:
     explain: bool = False
     buildDir: str = 'build'
     env: dict[str, str] = field(default_factory=dict)
+    compileArgs: list[str] = field(default_factory=list)
     programArgs: list[str] = field(default_factory=list)
     configPath: str | None = None
 
@@ -116,7 +117,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
     entry = configData.get('entry')
     explicitTargetfile = getattr(args, 'targetfile', None)
     targetfile = explicitTargetfile
-    if command == 'run' and not explicitTargetfile:
+    if command in ('build', 'run') and not explicitTargetfile:
         targetfile = entry
 
     resolvedTargetfile = None
@@ -130,7 +131,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
         cwdPath = resolvePath(str(argsCwd), invocationDir)
     elif configCwd:
         cwdPath = resolvePath(str(configCwd), rootDir)
-    elif command == 'run' and configPath is not None:
+    elif command in ('build', 'run') and configPath is not None:
         cwdPath = rootDir
     else:
         cwdPath = invocationDir
@@ -154,12 +155,19 @@ def buildSettings(args: ap.Namespace) -> Settings:
     )
     if command == 'run':
         runOnCompile = True
+    elif command == 'build':
+        runOnCompile = False
 
     envData = configData.get('env', {})
     env = {}
     if isinstance(envData, dict):
         env = {str(key): str(value) for key, value in envData.items()}
 
+    compileArgs = (
+        toStringList(configData.get('compile_args'))
+        + toStringList(configData.get('tool_args'))
+        + list(getattr(args, 'compileArgs', []))
+    )
     programArgs = (
         toStringList(configData.get('program_args'))
         + list(getattr(args, 'programArgs', []))
@@ -179,6 +187,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
         explain=bool(getattr(args, 'explain', False)),
         buildDir=buildDir,
         env=env,
+        compileArgs=compileArgs,
         programArgs=programArgs,
         configPath=str(configPath) if configPath else None,
     )

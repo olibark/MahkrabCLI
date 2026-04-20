@@ -29,3 +29,6 @@ Homepage = "https://github.com/olibark/MahkrabCLI"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+addopts = "-s"

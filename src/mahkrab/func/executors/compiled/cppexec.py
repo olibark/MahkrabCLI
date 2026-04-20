@@ -19,15 +19,16 @@ class Executor:
             outputfile += ".exe"
         
         flags = Executor.findFlags(full_path)
-        extraArgs = list(getattr(args, 'programArgs', []))
+        compileArgs = list(getattr(args, 'compileArgs', []))
+        programArgs = list(getattr(args, 'programArgs', []))
         
         cmd = apply_tool_override([c.GPP_PATH, full_path], args)
         
         if flags:
             cmd.extend(flags)
 
-        if extraArgs:
-            cmd.extend(extraArgs)
+        if compileArgs:
+            cmd.extend(compileArgs)
         
         cmd.extend(['-o', outputfile])
         
@@ -39,6 +40,8 @@ class Executor:
                     run_cmd = [outputfile]
                 else:
                     run_cmd = [f'./{outputfile}']
+                if programArgs:
+                    run_cmd.extend(programArgs)
                 Executor.runOnCompile(cmd, run_cmd)
             else:
                 Executor.compile(cmd)

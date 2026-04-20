@@ -10,6 +10,7 @@ It is a cross-language source runner and compile-and-run helper for small files 
 
 - `mk <file>` to run/interpret or compile a source file by extension
 - `mk run` to run the configured entry from `.mkconfig.toml` or `.mkconfig`
+- `mk build` to compile the configured entry without running it
 
 The goal is reducing friction when switching between languages.
 
@@ -54,10 +55,17 @@ Then run:
 mk run
 ```
 
+Or compile the configured entry without running it:
+
+```bash
+mk build
+```
+
 You can also point to a specific config file:
 
 ```bash
 mk run --config /path/to/.mkconfig.toml
+mk build --config /path/to/.mkconfig.toml
 ```
 
 ## Usage
@@ -67,6 +75,7 @@ Basic forms:
 ```bash
 mk <file>
 mk run
+mk build
 ```
 
 Useful options:
@@ -78,7 +87,8 @@ Useful options:
 - `--python <python>`: override Python interpreter for `.py`
 - `--lang <language>`: force a language handler instead of using file extension
 - `--tool <tool>`: override the compiler/interpreter executable
-- `--program-args ...`: extra compiler/interpreter args
+- `--compile-args ...`: extra compiler/interpreter args
+- `--program-args ...`: args passed to the compiled program or script
 - `-e, --explain`: print the resolved execution plan before running
 - `-r, --run-on-compile`: compile then run (compiled languages)
 - `-c, --clear`: clear terminal before action
@@ -92,12 +102,17 @@ mk main.cpp --build-dir out -o out/main -r
 mk script.py --python python3
 mk README.md --lang python --tool python3.12 --explain
 mk run --cwd ./examples
-mk app.go --program-args "-trimpath" -r
+mk build --cwd ./examples
+mk app.go --compile-args "-trimpath" -r
+mk main.c -r --program-args -- hello world
+mk hello.asm -r
+mk hello.S -r
+mk hello.asm --lang gas --explain
 ```
 
 ## Config (`.mkconfig.toml` / `.mkconfig`)
 
-`mk run` reads TOML config and resolves an entry file.
+`mk run` and `mk build` read TOML config and resolve an entry file.
 
 Auto-discovery checks current directory and parent directories for:
 
@@ -118,7 +133,8 @@ lang = "python"
 tool = "python3.12"
 run_on_compile = true
 clear = false
-program_args = ["-O2"]
+compile_args = ["-O2"]
+program_args = ["hello", "world"]
 
 [env]
 MY_VAR = "value"
@@ -126,11 +142,14 @@ MY_VAR = "value"
 
 Notes:
 
-- `entry` is required for `mk run`.
+- `entry` is required for `mk run` and `mk build`.
 - Relative paths in config are resolved from the config location.
 - `mk run` currently forces compile-and-run behavior (`run_on_compile = true` at runtime).
+- `mk build` forces compile-only behavior and exits with the compiler/build exit code.
 - `.mkconfig` is also parsed as TOML.
 - CLI values win over config values for `lang`, `tool`, and other runtime settings.
+- `compile_args` are passed to the compiler or interpreter command.
+- `program_args` are passed to the compiled program or script.
 - `tool` replaces the executable used to invoke the selected compiler/interpreter. For Java this affects the compile step (`javac`-side), not the `java` runtime command.
 
 ## `--lang`, `--tool`, and `--explain`
@@ -159,7 +178,7 @@ Common overrides include:
 - `MAHKRAB_GCC`, `MAHKRAB_GPP`, `MAHKRAB_RUSTC`, `MAHKRAB_GO`
 - `MAHKRAB_JAVAC`, `MAHKRAB_JAVA`
 - `MAHKRAB_PYTHON`, `MAHKRAB_NODE`, `MAHKRAB_TS`
-- `MAHKRAB_SQLITE3`, `MAHKRAB_NASM`
+- `MAHKRAB_SQLITE3`, `MAHKRAB_NASM`, `MAHKRAB_AS`, `MAHKRAB_LD`
 - plus other `MAHKRAB_*` tool variables defined in `src/mahkrab/constants.py`
 
 ## Supported language note
@@ -173,18 +192,59 @@ Current extension handlers include:
    - `.py`, `.js`, `.ts`, `.rb`, `.php`, `.lua`, `.sh`, `.ps1`, `.pl`, `.r`, `.m`, `.pro`, `.prolog`, `.plg`, `.dart`, `.sql`, `.sb3`
 - Compiled via dedicated executors: 
 
-   - `.c`, `.cpp`, `.cc`, `.cxx`, `.rs`, `.go`, `.java`, `.asm`
+   - `.c`, `.cpp`, `.cc`, `.cxx`, `.rs`, `.go`, `.java`, `.asm`, `.nasm`, `.s`, `.S`
 
 - Compiled via command mapping: 
    - `.cs`, `.vb`, `.pas`, `.f`, `.for`, `.f77`, `.f90`, `.f95`, `.f03`, `.f08`, `.adb`, `.ada`, `.swift`, `.kt`, `.bas`, `.cob`, `.cbl`
 
 There is also a binary run path for targets with no extension (or `.exe`).
 
+## Assembly support
+
+Supported assembly extensions:
+
+- NASM / Intel syntax: `.asm`, `.nasm`
+- GNU assembler / GAS: `.s`, `.S`
+
+Supported `--lang` overrides:
+
+- generic assembly: `assembly`, `asm`
+- NASM-specific: `nasm`
+- GAS-specific: `gas`, `gnu-asm`
+
+Default behavior:
+
+- `.asm` and `.nasm` resolve to NASM
+- `.s` and `.S` resolve to GAS
+- `--lang assembly` / `--lang asm` keeps assembly handling generic and then resolves the concrete backend from the file extension
+- `--lang nasm` or `--lang gas` forces a backend when you need to override the extension-based choice
+
+External tools used by assembly handlers:
+
+- NASM: `nasm`
+- GAS: `as` for `.s`, `gcc -c` for `.S`
+- Linker: `ld` on Unix-like systems
+
+Examples:
+
+```bash
+mk hello.asm -r
+mk hello.nasm --compile-args "-g" -r
+mk hello.s -r
+mk hello.S --compile-args "-Iinclude" -r
+mk hello.asm --lang gas --explain
+```
+
+Current platform notes:
+
+- NASM currently supports Unix-like systems only.
+- GAS currently supports Unix-like systems only.
+- MASM is not implemented yet, but the assembly executor is now variant-based so another backend can be added without rewriting the executor.
+
 ## Current limitations
 
 - Focus is convenience for small projects and standalone files, not full project orchestration.
 - Behavior depends on external tools being installed and available.
-- Assembly is currently Unix-like only (`.asm` is not supported on Windows in current code).
 - C/C++ dependency flags are limited, no current auto-discovery system
 
 ## Development
@@ -197,6 +257,7 @@ python3 -m venv .venv
 python -m pip install -U pip
 python -m pip install -e .
 mk -h
+pytest tests
 ```
 
 ## Contributing
