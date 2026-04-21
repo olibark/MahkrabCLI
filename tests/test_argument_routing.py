@@ -1,9 +1,10 @@
 import subprocess
+import importlib
 from pathlib import Path
 
 import pytest
 
-from mahkrab.func import run
+from mahkrab.func import workflow
 from mahkrab.func.executors.compiled import cexec
 from mahkrab.tools import config, parser
 
@@ -15,6 +16,12 @@ def test_parse_args_splits_compile_and_program_args() -> None:
 
     assert args.compileArgs == ['-O2']
     assert args.programArgs == ['hello', 'world']
+
+
+def test_legacy_run_import_aliases_workflow() -> None:
+    legacy_run = importlib.import_module('mahkrab.func.run')
+
+    assert legacy_run is workflow
 
 
 def test_parse_args_routes_bare_dash_dash_to_program_args() -> None:
@@ -73,7 +80,7 @@ def test_compiled_plan_routes_args_to_correct_command(
     program_arg: str,
 ) -> None:
     settings = config.buildSettings(parser.parse_args(argv))
-    plan = run.build_execution_plan(settings.targetfile, settings.outputfile, settings, settings.runOnCompile)
+    plan = workflow.build_execution_plan(settings.targetfile, settings.outputfile, settings, settings.runOnCompile)
 
     assert plan is not None
     assert compile_arg in plan['compile_cmd']
@@ -85,7 +92,7 @@ def test_python_plan_routes_interpreter_and_program_args() -> None:
     settings = config.buildSettings(
         parser.parse_args(['script.py', '--compile-args', '-X', 'utf8', '--program-args', '--', 'hello'])
     )
-    plan = run.build_execution_plan(settings.targetfile, settings.outputfile, settings, settings.runOnCompile)
+    plan = workflow.build_execution_plan(settings.targetfile, settings.outputfile, settings, settings.runOnCompile)
 
     assert plan is not None
     assert plan['run_cmd'][1:4] == ['-u', '-X', 'utf8']
@@ -107,7 +114,7 @@ def test_build_compiles_only(monkeypatch) -> None:
         staticmethod(lambda cmd, run_cmd: calls.setdefault('run_cmd', run_cmd)),
     )
 
-    assert run.build(settings.targetfile, settings.outputfile, settings) == 0
+    assert workflow.build(settings.targetfile, settings.outputfile, settings) == 0
     assert calls['compile_cmd']
     assert 'run_cmd' not in calls
 
@@ -120,4 +127,4 @@ def test_build_returns_compiler_exit_code(monkeypatch) -> None:
 
     monkeypatch.setattr(cexec.Executor, 'compile', staticmethod(fail_compile))
 
-    assert run.build(settings.targetfile, settings.outputfile, settings) == 7
+    assert workflow.build(settings.targetfile, settings.outputfile, settings) == 7

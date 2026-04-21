@@ -260,6 +260,19 @@ mk -h
 pytest tests
 ```
 
+### Internal layout
+
+The CLI entry point stays in `src/mahkrab/cli.py`. Runtime settings and config parsing live in `src/mahkrab/tools/config.py` and command-line parsing lives in `src/mahkrab/tools/parser.py`.
+
+Execution code is split by responsibility:
+
+- `src/mahkrab/func/workflow.py`: top-level run and build workflow.
+- `src/mahkrab/func/plans.py`: execution-plan creation and `--explain` output.
+- `src/mahkrab/func/commands.py`: compiler, interpreter, and run command construction.
+- `src/mahkrab/func/languages.py`: language aliases, labels, and extension mapping.
+
+The old internal `run.py` module has been renamed to the clearer workflow module. The command-line interface remains unchanged.
+
 ## Contributing
 
 Issues and pull requests are welcome.

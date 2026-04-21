@@ -3,7 +3,7 @@ import tomllib
 from typing import Callable, Optional
 
 from mahkrab import constants as c
-from mahkrab.func import og, run, terry, tree
+from mahkrab.func import og, terry, tree, workflow
 from mahkrab.tools import config, parser
 
 
@@ -56,9 +56,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         'targetfile': (
             actionRunTarget,
             lambda: (
-                run.build(settings.targetfile, settings.outputfile, settings)
+                workflow.build(settings.targetfile, settings.outputfile, settings)
                 if args.command == 'build'
-                else run.run(
+                else workflow.run(
                     settings.targetfile,
                     settings.outputfile,
                     settings,
