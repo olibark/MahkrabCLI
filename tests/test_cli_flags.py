@@ -34,7 +34,7 @@ def test_cli_runs_targetfile(monkeypatch) -> None:
     monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
     monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
     monkeypatch.setattr(
-        cli.run,
+        cli.workflow,
         "run",
         lambda targetfile, outputfile, runtime_settings, run_on_compile: called.update(
             {
@@ -64,7 +64,7 @@ def test_cli_builds_targetfile_and_returns_build_code(monkeypatch) -> None:
     monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
     monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
     monkeypatch.setattr(
-        cli.run,
+        cli.workflow,
         "build",
         lambda targetfile, outputfile, runtime_settings: called.update(
             {
@@ -124,6 +124,25 @@ def test_cli_runs_terry_flag(monkeypatch) -> None:
 
     assert cli.main(["--terry"]) == 0
     assert called["terry"] == 1
+
+
+def test_cli_runs_doctor_command(monkeypatch) -> None:
+    args = make_args(command="doctor")
+    settings = make_settings()
+    called = {}
+
+    monkeypatch.setattr(cli.parser, "parse_args", lambda argv: args)
+    monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
+    monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
+
+    def run_doctor(runtime_settings):
+        called["settings"] = runtime_settings
+        return 5
+
+    monkeypatch.setattr(cli.doctor, "run", run_doctor)
+
+    assert cli.main(["doctor"]) == 5
+    assert called["settings"] is settings
 
 
 def test_cli_clears_before_action(monkeypatch) -> None:

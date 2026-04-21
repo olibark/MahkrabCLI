@@ -130,6 +130,44 @@ class TestParserAndConfig(unittest.TestCase):
             self.assertEqual(settings.cwd, str(nestedDir.resolve()))
             self.assertEqual(settings.targetfile, str((nestedDir / 'hello.py').resolve()))
 
+    def test_doctor_options_load_from_config_table(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            configDir = projectDir / '.mkconfig'
+            configDir.mkdir(parents=True)
+
+            (configDir / '.mkconfig.toml').write_text(
+                '[doctor]\nverbose = true\n',
+                encoding='utf-8',
+            )
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['doctor'])
+                settings = config.buildSettings(args)
+
+            self.assertFalse(settings.doctorQuiet)
+            self.assertTrue(settings.doctorVerbose)
+            self.assertEqual(settings.sources['doctorMode'], 'config file')
+
+    def test_doctor_cli_options_win_over_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            configDir = projectDir / '.mkconfig'
+            configDir.mkdir(parents=True)
+
+            (configDir / '.mkconfig.toml').write_text(
+                'doctor_verbose = true\n',
+                encoding='utf-8',
+            )
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['doctor', '--quiet'])
+                settings = config.buildSettings(args)
+
+            self.assertTrue(settings.doctorQuiet)
+            self.assertFalse(settings.doctorVerbose)
+            self.assertEqual(settings.sources['doctorMode'], 'CLI option --quiet')
+
 
 if __name__ == '__main__':
     unittest.main()

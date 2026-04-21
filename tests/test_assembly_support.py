@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from mahkrab.func import run
+from mahkrab.func import languages, plans
 from mahkrab.func.executors.compiled import asmexec
 
 
@@ -49,7 +49,7 @@ def test_assembly_extensions_resolve_to_expected_variant(
     expected: str,
 ) -> None:
     args = make_args()
-    plan = run.build_execution_plan(filename, None, args, False)
+    plan = plans.build_execution_plan(filename, None, args, False)
 
     assert plan is not None
     assert plan['language_key'] == expected
@@ -66,12 +66,12 @@ def test_assembly_extensions_resolve_to_expected_variant(
     ],
 )
 def test_assembly_language_aliases_normalize(alias: str, expected: str) -> None:
-    assert run.normalize_language(alias) == expected
+    assert languages.normalize_language(alias) == expected
 
 
 def test_nasm_plan_includes_compile_link_and_run_commands(assembly_tools, capsys) -> None:
     args = make_args(compileArgs=['-g'], programArgs=['hello'], runOnCompile=True)
-    plan = run.build_execution_plan('hello.asm', None, args, True)
+    plan = plans.build_execution_plan('hello.asm', None, args, True)
 
     assert plan is not None
     assert plan['language_key'] == 'assembly_nasm'
@@ -87,7 +87,7 @@ def test_nasm_plan_includes_compile_link_and_run_commands(assembly_tools, capsys
     assert plan['link_cmd'] == ['ld', '-o', 'build/hello', 'build/hello.o']
     assert plan['run_cmd'] == ['./build/hello', 'hello']
 
-    run.print_explain(args, plan)
+    plans.print_explain(args, plan)
     output = capsys.readouterr().out
 
     assert 'language: Assembly (NASM) (extension)' in output
@@ -98,7 +98,7 @@ def test_nasm_plan_includes_compile_link_and_run_commands(assembly_tools, capsys
 
 def test_gas_plan_uses_gcc_driver_for_preprocessed_sources(assembly_tools, capsys) -> None:
     args = make_args(compileArgs=['-Iinclude'], programArgs=['arg1'], runOnCompile=True)
-    plan = run.build_execution_plan('hello.S', None, args, True)
+    plan = plans.build_execution_plan('hello.S', None, args, True)
 
     assert plan is not None
     assert plan['language_key'] == 'assembly_gas'
@@ -113,7 +113,7 @@ def test_gas_plan_uses_gcc_driver_for_preprocessed_sources(assembly_tools, capsy
     assert plan['link_cmd'] == ['ld', '-o', 'build/hello', 'build/hello.o']
     assert plan['run_cmd'] == ['./build/hello', 'arg1']
 
-    run.print_explain(args, plan)
+    plans.print_explain(args, plan)
     output = capsys.readouterr().out
 
     assert 'language: Assembly (GNU assembler) (extension)' in output
@@ -123,7 +123,7 @@ def test_gas_plan_uses_gcc_driver_for_preprocessed_sources(assembly_tools, capsy
 
 def test_gas_language_override_forces_gas_plan_on_asm_file(assembly_tools) -> None:
     args = make_args(lang='gas')
-    plan = run.build_execution_plan('hello.asm', None, args, False)
+    plan = plans.build_execution_plan('hello.asm', None, args, False)
 
     assert plan is not None
     assert plan['language_key'] == 'assembly_gas'
@@ -141,7 +141,7 @@ def test_gas_plan_reports_platform_restriction(monkeypatch, capsys) -> None:
     monkeypatch.setattr(asmexec.c, 'osName', 'windows')
 
     args = make_args()
-    plan = run.build_execution_plan('hello.s', None, args, False)
+    plan = plans.build_execution_plan('hello.s', None, args, False)
 
     assert plan is None
     assert 'Assembly (GNU assembler) is not supported on windows.' in capsys.readouterr().out
@@ -151,7 +151,7 @@ def test_nasm_plan_reports_platform_restriction(monkeypatch, capsys) -> None:
     monkeypatch.setattr(asmexec.c, 'osName', 'windows')
 
     args = make_args()
-    plan = run.build_execution_plan('hello.asm', None, args, False)
+    plan = plans.build_execution_plan('hello.asm', None, args, False)
 
     assert plan is None
     assert 'Assembly (NASM) is not supported on windows.' in capsys.readouterr().out

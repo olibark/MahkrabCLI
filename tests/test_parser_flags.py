@@ -55,6 +55,30 @@ def test_parses_run_on_compile_flag(flag: str) -> None:
     assert args.runOnCompile is True
 
 
+@pytest.mark.parametrize("flag", ["-q", "--quiet"])
+def test_parses_doctor_quiet_flag(flag: str) -> None:
+    args = parser.parse_args(["doctor", flag])
+
+    assert args.command == "doctor"
+    assert args.doctorQuiet is True
+    assert args.doctorVerbose is False
+
+
+def test_parses_doctor_verbose_flag() -> None:
+    args = parser.parse_args(["doctor", "--verbose"])
+
+    assert args.command == "doctor"
+    assert args.doctorVerbose is True
+    assert args.doctorQuiet is False
+
+
+def test_rejects_conflicting_doctor_output_flags() -> None:
+    with pytest.raises(SystemExit) as error:
+        parser.parse_args(["doctor", "--quiet", "--verbose"])
+
+    assert error.value.code == 2
+
+
 @pytest.mark.parametrize("flag", ["--clear", "-c"])
 def test_parses_clear_flag(flag: str) -> None:
     args = parser.parse_args(["main.py", flag])
@@ -102,6 +126,7 @@ def test_help_flags_exit_successfully(flag: str, capsys) -> None:
     output = capsys.readouterr().out.lower()
     assert "usage:" in output
     assert "build" in output
+    assert "doctor" in output
 
 
 @pytest.mark.parametrize("flag", ["-v", "--version"])
@@ -139,6 +164,13 @@ def test_build_command_sets_command_instead_of_targetfile() -> None:
     args = parser.parse_args(["build"])
 
     assert args.command == "build"
+    assert args.targetfile is None
+
+
+def test_doctor_command_sets_command_instead_of_targetfile() -> None:
+    args = parser.parse_args(["doctor"])
+
+    assert args.command == "doctor"
     assert args.targetfile is None
 
 

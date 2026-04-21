@@ -3,7 +3,7 @@ import tomllib
 from typing import Callable, Optional
 
 from mahkrab import constants as c
-from mahkrab.func import og, run, terry, tree
+from mahkrab.func import doctor, og, terry, tree, workflow
 from mahkrab.tools import config, parser
 
 
@@ -42,7 +42,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     actionList = bool(args.list)
     actionOgs = bool(args.ogs)
     actionTerry = bool(args.terry)
-    hasAction = actionRunTarget or actionList or actionOgs or actionTerry
+    actionDoctor = args.command == 'doctor'
+    hasAction = actionRunTarget or actionList or actionOgs or actionTerry or actionDoctor
 
     if args.command in ('build', 'run') and not settings.targetfile:
         printError("No 'entry' configured in .mkconfig/.mkconfig.toml.")
@@ -52,13 +53,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         os.system(c.CLEAR)
 
     handlers: dict[str, tuple[bool, Callable[[], object]]] = {
+        'doctor': (actionDoctor, lambda: doctor.run(settings)),
         'terry': (actionTerry, terry.terry),
         'targetfile': (
             actionRunTarget,
             lambda: (
-                run.build(settings.targetfile, settings.outputfile, settings)
+                workflow.build(settings.targetfile, settings.outputfile, settings)
                 if args.command == 'build'
-                else run.run(
+                else workflow.run(
                     settings.targetfile,
                     settings.outputfile,
                     settings,
@@ -73,7 +75,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     for _name, (shouldRun, handler) in handlers.items():
         if shouldRun:
             result = handler()
-            if _name == 'targetfile' and args.command == 'build' and isinstance(result, int):
+            if _name in ('doctor', 'targetfile') and isinstance(result, int):
                 return result
 
             return 0

@@ -11,6 +11,7 @@ It is a cross-language source runner and compile-and-run helper for small files 
 - `mk <file>` to run/interpret or compile a source file by extension
 - `mk run` to run the configured entry from `.mkconfig.toml` or `.mkconfig`
 - `mk build` to compile the configured entry without running it
+- `mk doctor` to diagnose external compiler/interpreter availability
 
 The goal is reducing friction when switching between languages.
 
@@ -76,6 +77,7 @@ Basic forms:
 mk <file>
 mk run
 mk build
+mk doctor
 ```
 
 Useful options:
@@ -89,6 +91,8 @@ Useful options:
 - `--tool <tool>`: override the compiler/interpreter executable
 - `--compile-args ...`: extra compiler/interpreter args
 - `--program-args ...`: args passed to the compiled program or script
+- `-q, --quiet`: only print the `mk doctor` summary
+- `--verbose`: print extra `mk doctor` diagnostics, including generated command plans
 - `-e, --explain`: print the resolved execution plan before running
 - `-r, --run-on-compile`: compile then run (compiled languages)
 - `-c, --clear`: clear terminal before action
@@ -103,6 +107,9 @@ mk script.py --python python3
 mk README.md --lang python --tool python3.12 --explain
 mk run --cwd ./examples
 mk build --cwd ./examples
+mk doctor
+mk doctor --quiet
+mk doctor --verbose
 mk app.go --compile-args "-trimpath" -r
 mk main.c -r --program-args -- hello world
 mk hello.asm -r
@@ -136,6 +143,10 @@ clear = false
 compile_args = ["-O2"]
 program_args = ["hello", "world"]
 
+[doctor]
+quiet = false
+verbose = false
+
 [env]
 MY_VAR = "value"
 ```
@@ -151,6 +162,7 @@ Notes:
 - `compile_args` are passed to the compiler or interpreter command.
 - `program_args` are passed to the compiled program or script.
 - `tool` replaces the executable used to invoke the selected compiler/interpreter. For Java this affects the compile step (`javac`-side), not the `java` runtime command.
+- `doctor.quiet` and `doctor.verbose` configure `mk doctor` output. You can also use top-level `doctor_quiet` and `doctor_verbose`; CLI flags win over config.
 
 ## `--lang`, `--tool`, and `--explain`
 
@@ -162,7 +174,13 @@ Notes:
 
 `mk` calls external compilers/interpreters. They are not bundled.
 
-If a required tool is missing, execution fails with a runtime error for that tool.
+Use `mk doctor` to check the configured compiler/interpreter commands before running code. It reports each supported language, the required command values, whether each command resolves, the resolved executable path, and whether the language is runnable/buildable on the current machine.
+
+Use `mk doctor --quiet` when you only need the final status. Use `mk doctor --verbose` to include the generated compile/link/run command plans used for the checks.
+
+`mk doctor` exits with status `0` only when every supported language toolchain is available. If any language is unavailable, it exits non-zero and prints an `Unavailable languages:` line.
+
+If a required tool is missing during normal execution, execution fails with a runtime error for that tool.
 
 By default, command names come from `PATH` (for example `gcc`, `node`, `javac`).  
 You can override tool paths/commands with environment variables, for example:
@@ -259,6 +277,19 @@ python -m pip install -e .
 mk -h
 pytest tests
 ```
+
+### Internal layout
+
+The CLI entry point stays in `src/mahkrab/cli.py`. Runtime settings and config parsing live in `src/mahkrab/tools/config.py` and command-line parsing lives in `src/mahkrab/tools/parser.py`.
+
+Execution code is split by responsibility:
+
+- `src/mahkrab/func/workflow.py`: top-level run and build workflow.
+- `src/mahkrab/func/plans.py`: execution-plan creation and `--explain` output.
+- `src/mahkrab/func/commands.py`: compiler, interpreter, and run command construction.
+- `src/mahkrab/func/languages.py`: language aliases, labels, and extension mapping.
+
+The old internal `run.py` module has been renamed to the clearer workflow module. The command-line interface remains unchanged.
 
 ## Contributing
 
