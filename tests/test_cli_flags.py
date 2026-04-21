@@ -34,7 +34,7 @@ def test_cli_runs_targetfile(monkeypatch) -> None:
     monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
     monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
     monkeypatch.setattr(
-        cli.run,
+        cli.workflow,
         "run",
         lambda targetfile, outputfile, runtime_settings, run_on_compile: called.update(
             {
@@ -64,7 +64,7 @@ def test_cli_builds_targetfile_and_returns_build_code(monkeypatch) -> None:
     monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
     monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
     monkeypatch.setattr(
-        cli.run,
+        cli.workflow,
         "build",
         lambda targetfile, outputfile, runtime_settings: called.update(
             {
