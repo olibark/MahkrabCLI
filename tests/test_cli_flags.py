@@ -126,6 +126,25 @@ def test_cli_runs_terry_flag(monkeypatch) -> None:
     assert called["terry"] == 1
 
 
+def test_cli_runs_doctor_command(monkeypatch) -> None:
+    args = make_args(command="doctor")
+    settings = make_settings()
+    called = {}
+
+    monkeypatch.setattr(cli.parser, "parse_args", lambda argv: args)
+    monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
+    monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
+
+    def run_doctor(runtime_settings):
+        called["settings"] = runtime_settings
+        return 5
+
+    monkeypatch.setattr(cli.doctor, "run", run_doctor)
+
+    assert cli.main(["doctor"]) == 5
+    assert called["settings"] is settings
+
+
 def test_cli_clears_before_action(monkeypatch) -> None:
     args = make_args(ogs=True)
     settings = make_settings(clear=True)

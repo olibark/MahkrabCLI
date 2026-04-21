@@ -4,7 +4,7 @@ import sys
 
 from mahkrab.tools.getversion import get_version
 
-COMMANDS = {'build', 'run'}
+COMMANDS = {'build', 'doctor', 'run'}
 SPECIAL_ARG_DESTS = {
     '--compile-args': 'compileArgsRaw',
     '--tool-args': 'compileArgsRaw',
@@ -21,6 +21,8 @@ OPTION_TOKENS = {
     '-r', '--run-on-compile',
     '--compile-args', '--tool-args',
     '--program-args',
+    '-q', '--quiet',
+    '--verbose',
     '-c', '--clear',
     '-ls', '--list',
     '-og', '--ogs',
@@ -102,7 +104,11 @@ def parse_args(argv: list[str] | None = None) -> ap.Namespace:
     argv, rawArgValues = preprocessArgv(argv)
     parser = ap.ArgumentParser(
         prog="MAHKRAB-CLI",
-        epilog="Commands: run (compile and run configured entry), build (compile configured entry only).",
+        epilog=(
+            "Commands: run (compile and run configured entry), "
+            "build (compile configured entry only), "
+            "doctor (diagnose external toolchains)."
+        ),
     )
     parser.add_argument(
         'target',
@@ -169,6 +175,19 @@ def parse_args(argv: list[str] | None = None) -> ap.Namespace:
         default=[],
         metavar='<args>',
         help='Args passed to the compiled program or script (supports quoted values).',
+    )
+    doctor_output_group = parser.add_mutually_exclusive_group()
+    doctor_output_group.add_argument(
+        '-q', '--quiet',
+        dest='doctorQuiet',
+        action='store_true',
+        help='Only print the doctor summary.',
+    )
+    doctor_output_group.add_argument(
+        '--verbose',
+        dest='doctorVerbose',
+        action='store_true',
+        help='Print extra doctor diagnostics, including generated command plans.',
     )
     parser.add_argument(
         '-c', '--clear', 

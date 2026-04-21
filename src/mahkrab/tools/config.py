@@ -28,6 +28,9 @@ class Settings:
     compileArgs: list[str] = field(default_factory=list)
     programArgs: list[str] = field(default_factory=list)
     configPath: str | None = None
+    sources: dict[str, str] = field(default_factory=dict)
+    doctorQuiet: bool = False
+    doctorVerbose: bool = False
 
 
 def toStringList(value: object) -> list[str]:
@@ -100,6 +103,14 @@ def loadConfig(configPath: Path | None) -> dict:
     return data
 
 
+def getDoctorConfigValue(configData: dict, key: str, default: bool = False) -> bool:
+    doctorData = configData.get('doctor', {})
+    if isinstance(doctorData, dict) and key in doctorData:
+        return bool(doctorData[key])
+
+    return bool(configData.get(f'doctor_{key}', default))
+
+
 def buildSettings(args: ap.Namespace) -> Settings:
     invocationDir = Path.cwd().resolve()
     requestedConfig = getattr(args, 'config', None)
@@ -142,12 +153,17 @@ def buildSettings(args: ap.Namespace) -> Settings:
         filename = Path(resolvedTargetfile).stem
         outputfile = str(Path(buildDir) / filename)
 
-    pythonCmd = (
-        getattr(args, 'pythonCmd', None)
-        or configData.get('python')
-        or configData.get('python_cmd')
-        or c.PYTHON_PATH
-    )
+    argsPythonCmd = getattr(args, 'pythonCmd', None)
+    configPythonCmd = configData.get('python') or configData.get('python_cmd')
+    pythonCmd = argsPythonCmd or configPythonCmd or c.PYTHON_PATH
+    if argsPythonCmd:
+        pythonSource = 'CLI option --python'
+    elif configPythonCmd:
+        pythonSource = 'config file'
+    elif os.environ.get('MAHKRAB_PYTHON') == c.PYTHON_PATH:
+        pythonSource = 'environment variable MAHKRAB_PYTHON'
+    else:
+        pythonSource = 'default'
 
     runOnCompile = bool(
         getattr(args, 'runOnCompile', False)
@@ -173,6 +189,41 @@ def buildSettings(args: ap.Namespace) -> Settings:
         + list(getattr(args, 'programArgs', []))
     )
 
+    argsTool = getattr(args, 'tool', None)
+    configTool = configData.get('tool')
+    sources = {
+        'pythonCmd': pythonSource,
+    }
+    if argsTool:
+        sources['tool'] = 'CLI option --tool'
+    elif configTool:
+        sources['tool'] = 'config file'
+
+    argsDoctorQuiet = bool(getattr(args, 'doctorQuiet', False))
+    argsDoctorVerbose = bool(getattr(args, 'doctorVerbose', False))
+    configDoctorQuiet = getDoctorConfigValue(configData, 'quiet')
+    configDoctorVerbose = getDoctorConfigValue(configData, 'verbose')
+    if argsDoctorQuiet:
+        doctorQuiet = True
+        doctorVerbose = False
+        sources['doctorMode'] = 'CLI option --quiet'
+    elif argsDoctorVerbose:
+        doctorQuiet = False
+        doctorVerbose = True
+        sources['doctorMode'] = 'CLI option --verbose'
+    elif configDoctorQuiet:
+        doctorQuiet = True
+        doctorVerbose = False
+        sources['doctorMode'] = 'config file'
+    elif configDoctorVerbose:
+        doctorQuiet = False
+        doctorVerbose = True
+        sources['doctorMode'] = 'config file'
+    else:
+        doctorQuiet = False
+        doctorVerbose = False
+        sources['doctorMode'] = 'default'
+
     settings = Settings(
         command=command,
         targetfile=resolvedTargetfile,
@@ -180,7 +231,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
         outputfile=str(outputfile) if outputfile else None,
         cwd=str(cwdPath),
         lang=getattr(args, 'lang', None) or configData.get('lang'),
-        tool=getattr(args, 'tool', None) or configData.get('tool'),
+        tool=argsTool or configTool,
         pythonCmd=str(pythonCmd),
         runOnCompile=runOnCompile,
         clear=bool(getattr(args, 'clear', False) or configData.get('clear', False)),
@@ -190,6 +241,9 @@ def buildSettings(args: ap.Namespace) -> Settings:
         compileArgs=compileArgs,
         programArgs=programArgs,
         configPath=str(configPath) if configPath else None,
+        sources=sources,
+        doctorQuiet=doctorQuiet,
+        doctorVerbose=doctorVerbose,
     )
 
     return settings
