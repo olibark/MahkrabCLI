@@ -2,6 +2,7 @@ import subprocess, sys
 import argparse as ap
 
 from mahkrab import constants as c
+from mahkrab.func.executors import status
 from mahkrab.tools.decorators.timers import runtime
 
 class Executor:
@@ -17,22 +18,14 @@ class Executor:
         )
         
     @staticmethod
-    def exec(run_cmd: list[str], tool_name: str, args: ap.Namespace) -> None:
+    def exec(run_cmd: list[str], tool_name: str, args: ap.Namespace) -> int:
         try:
             Executor.run(run_cmd)
+            return 0
             
         except subprocess.CalledProcessError as e:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} Command failed with return code {e.returncode}.\n"
-            )
+            return status.commandFailure(e)
         except FileNotFoundError: 
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} The {tool_name} interpreter was not found.\n"
-            )
+            return status.missingTool(f"The {tool_name} interpreter was not found.")
         except Exception as e:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} An unexpected error occured {e}.\n"
-            )
+            return status.unexpectedFailure(e)

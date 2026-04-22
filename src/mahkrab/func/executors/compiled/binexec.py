@@ -2,6 +2,7 @@ import subprocess, os, sys
 
 from mahkrab.tools.decorators.timers import runtime
 from mahkrab import constants as c 
+from mahkrab.func.executors import status
 
 @runtime
 def run(run_cmd: list[str]) -> None:
@@ -36,7 +37,7 @@ def resolve_binary_path(targetfile: str, buildDir: str) -> str:
 
     return candidates[0]
 
-def execbin(targetfile: str, buildDir: str = "build", programArgs: list[str] | None = None) -> None:
+def execbin(targetfile: str, buildDir: str = "build", programArgs: list[str] | None = None) -> int:
     try: 
         extraArgs = programArgs or []
         run_path = resolve_binary_path(targetfile, buildDir)
@@ -51,19 +52,11 @@ def execbin(targetfile: str, buildDir: str = "build", programArgs: list[str] | N
         run_cmd.extend(extraArgs)
         
         run(run_cmd)
+        return 0
     
     except subprocess.CalledProcessError as e:
-        print(
-            f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
-            f"Error:{c.Colours.ENDC} Command failed with return code {c.Colours.RED}{e.returncode}{c.Colours.ENDC}.\n"
-        )
+        return status.commandFailure(e)
     except FileNotFoundError: 
-        print(
-            f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
-            f"Error:{c.Colours.ENDC} Binary not found in {c.Colours.RED}directory{c.Colours.ENDC}.\n"
-        )
+        return status.missingTool(f"Binary not found in {c.Colours.RED}directory{c.Colours.ENDC}.")
     except Exception as e:
-        print(
-            f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
-            f"Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n"
-        )
+        return status.unexpectedFailure(e)

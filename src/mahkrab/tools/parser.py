@@ -23,6 +23,8 @@ OPTION_TOKENS = {
     '--program-args',
     '-q', '--quiet',
     '--verbose',
+    '--all',
+    '--languages',
     '-c', '--clear',
     '-ls', '--list',
     '-og', '--ogs',
@@ -100,9 +102,8 @@ def preprocessArgv(argv: list[str] | None) -> tuple[list[str], dict[str, list[li
 
     return cleanedArgv, rawArgValues
 
-def parse_args(argv: list[str] | None = None) -> ap.Namespace:
-    argv, rawArgValues = preprocessArgv(argv)
-    parser = ap.ArgumentParser(
+def createParser() -> ap.ArgumentParser:
+    return ap.ArgumentParser(
         prog="MAHKRAB-CLI",
         epilog=(
             "Commands: run (compile and run configured entry), "
@@ -110,11 +111,9 @@ def parse_args(argv: list[str] | None = None) -> ap.Namespace:
             "doctor (diagnose external toolchains)."
         ),
     )
-    parser.add_argument(
-        'target',
-        nargs="?",
-        help='Target file name or command',
-    )
+
+
+def addSharedArgs(parser: ap.ArgumentParser) -> None:
     parser.add_argument(
         '-o', '--output',
         type=str, metavar='<file>',
@@ -176,22 +175,12 @@ def parse_args(argv: list[str] | None = None) -> ap.Namespace:
         metavar='<args>',
         help='Args passed to the compiled program or script (supports quoted values).',
     )
-    doctor_output_group = parser.add_mutually_exclusive_group()
-    doctor_output_group.add_argument(
-        '-q', '--quiet',
-        dest='doctorQuiet',
-        action='store_true',
-        help='Only print the doctor summary.',
-    )
-    doctor_output_group.add_argument(
-        '--verbose',
-        dest='doctorVerbose',
-        action='store_true',
-        help='Print extra doctor diagnostics, including generated command plans.',
-    )
+
+
+def addUtilityArgs(parser: ap.ArgumentParser) -> None:
     parser.add_argument(
-        '-c', '--clear', 
-        action='store_true', 
+        '-c', '--clear',
+        action='store_true',
         help="Clear the console before execution"
     )
     parser.add_argument(
@@ -221,18 +210,125 @@ def parse_args(argv: list[str] | None = None) -> ap.Namespace:
         help='Show program version',
     )
 
-    args = parser.parse_args(argv)
 
-    args.command = None
-    args.targetfile = None
+def addDoctorArgs(parser: ap.ArgumentParser) -> None:
+    doctor_output_group = parser.add_mutually_exclusive_group()
+    doctor_output_group.add_argument(
+        '-q', '--quiet',
+        dest='doctorQuiet',
+        action='store_true',
+        help='Only print the doctor summary.',
+    )
+    doctor_output_group.add_argument(
+        '--verbose',
+        dest='doctorVerbose',
+        action='store_true',
+        help='Print extra doctor diagnostics, including generated command plans.',
+    )
+    parser.add_argument(
+        '--all',
+        dest='doctorAll',
+        action='store_true',
+        help='Doctor: check every supported language toolchain.',
+    )
+    parser.add_argument(
+        '--languages',
+        dest='doctorLanguages',
+        action='store_true',
+        help='Doctor: list languages available for doctor checks.',
+    )
+
+
+def createDirectParser() -> ap.ArgumentParser:
+    parser = createParser()
+    parser.add_argument(
+        'target',
+        nargs="?",
+        help='Target file name',
+    )
+    addSharedArgs(parser)
+    addUtilityArgs(parser)
+    return parser
+
+
+def createCommandParser() -> ap.ArgumentParser:
+    parser = createParser()
+    subparsers = parser.add_subparsers(dest='command')
+
+    runParser = subparsers.add_parser('run', help='Compile and run configured entry')
+    addSharedArgs(runParser)
+    addUtilityArgs(runParser)
+
+    buildParser = subparsers.add_parser('build', help='Compile configured entry only')
+    addSharedArgs(buildParser)
+    addUtilityArgs(buildParser)
+
+    doctorParser = subparsers.add_parser('doctor', help='Diagnose external toolchains')
+    doctorParser.add_argument(
+        'doctorTarget',
+        nargs="?",
+        help='Optional target file or "languages"',
+    )
+    addSharedArgs(doctorParser)
+    addDoctorArgs(doctorParser)
+    addUtilityArgs(doctorParser)
+
+    return parser
+
+
+def fillMissingArgs(args: ap.Namespace) -> None:
+    defaults = {
+        'target': None,
+        'doctorTarget': None,
+        'targetfile': None,
+        'output': None,
+        'buildDir': None,
+        'cwd': None,
+        'config': None,
+        'pythonCmd': None,
+        'lang': None,
+        'tool': None,
+        'runOnCompile': False,
+        'compileArgsRaw': [],
+        'programArgsRaw': [],
+        'compileArgs': [],
+        'programArgs': [],
+        'doctorQuiet': False,
+        'doctorVerbose': False,
+        'doctorAll': False,
+        'doctorLanguages': False,
+        'clear': False,
+        'list': None,
+        'ogs': False,
+        'terry': False,
+        'explain': False,
+    }
+    for name, value in defaults.items():
+        if not hasattr(args, name):
+            setattr(args, name, value)
+
+
+def parse_args(argv: list[str] | None = None) -> ap.Namespace:
+    argv, rawArgValues = preprocessArgv(argv)
+    firstArg = argv[0] if argv else None
+    if firstArg in COMMANDS:
+        parser = createCommandParser()
+        args = parser.parse_args(argv)
+    else:
+        parser = createDirectParser()
+        args = parser.parse_args(argv)
+        args.command = None
+
+    fillMissingArgs(args)
     args.compileArgsRaw = rawArgValues['compileArgsRaw']
     args.programArgsRaw = rawArgValues['programArgsRaw']
     args.compileArgs = parseArgumentValues(args.compileArgsRaw)
     args.programArgs = parseArgumentValues(args.programArgsRaw)
-    
-    if args.target in COMMANDS: 
-        args.command = args.target
-    else:
+
+    if args.command == 'doctor' and args.doctorTarget:
+        if args.doctorTarget == 'languages':
+            args.doctorLanguages = True
+    elif args.command is None:
         args.targetfile = args.target
-    
+
     return args

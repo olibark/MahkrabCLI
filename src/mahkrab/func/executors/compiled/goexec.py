@@ -2,12 +2,13 @@ import os, subprocess, sys
 import argparse as ap
 
 from mahkrab import constants as c
+from mahkrab.func.executors import status
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
 from mahkrab.tools.tooloverride import apply_tool_override
 
 class Executor:
     @staticmethod
-    def exec(full_path: str, outputfile: str, args: ap.Namespace, runOnCompile: bool) -> None:
+    def exec(full_path: str, outputfile: str, args: ap.Namespace, runOnCompile: bool) -> int:
         if c.osName == "windows" and not outputfile.endswith('.exe'):
             outputfile += ".exe"
         
@@ -28,22 +29,14 @@ class Executor:
                 Executor.runOnCompile(cmd, run_cmd)
             else:
                 Executor.compile(cmd)
+            return 0
                 
         except subprocess.CalledProcessError as e:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} Command failed with return code {c.Colours.RED}{e.returncode}{c.Colours.ENDC}.\n"
-            )
+            return status.commandFailure(e)
         except FileNotFoundError: 
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} Go not found in {c.Colours.RED}PATH{c.Colours.ENDC}.\n"
-            )
+            return status.missingTool(f"Go not found in {c.Colours.RED}PATH{c.Colours.ENDC}.")
         except Exception as e:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} An unexpected error occured {c.Colours.RED}{e}{c.Colours.RED}.\n"
-            )
+            return status.unexpectedFailure(e)
     
     @staticmethod
     @compiletime

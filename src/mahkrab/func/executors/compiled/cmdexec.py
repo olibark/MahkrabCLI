@@ -1,32 +1,25 @@
 import subprocess, sys
 
 from mahkrab import constants as c
+from mahkrab.func.executors import status
 from mahkrab.tools.decorators.timers import compiletime, compileruntime
 
 class Executor:
     @staticmethod
-    def exec(cmd: list[str], run_cmd: list[str], tool_name: str, runOnCompile: bool) -> None:
+    def exec(cmd: list[str], run_cmd: list[str], tool_name: str, runOnCompile: bool) -> int:
         try:
             if runOnCompile:
                 Executor.runOnCompile(cmd, run_cmd)
             else:
                 Executor.compile(cmd)
+            return 0
 
         except subprocess.CalledProcessError as e:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} Command failed with return code {e.returncode}.\n"
-            )
+            return status.commandFailure(e)
         except FileNotFoundError:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} The {tool_name} compiler was not found.\n"
-            )
+            return status.missingTool(f"The {tool_name} compiler was not found.")
         except Exception as e:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} An unexpected error occured {e}.\n"
-            )
+            return status.unexpectedFailure(e)
 
     @staticmethod
     @compiletime

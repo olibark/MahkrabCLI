@@ -5,6 +5,7 @@ import subprocess
 
 from mahkrab import constants as c
 from mahkrab.func import commands, languages, plans
+from mahkrab.func.executors import status
 from mahkrab.func.executors.compiled import binexec, cmdexec
 from mahkrab.func.executors.interpreted import interpexec, pyexec, sqlexec
 
@@ -29,42 +30,59 @@ resolve_language = languages.resolve_language
 SUPPORTED_LANGUAGES = languages.SUPPORTED_LANGUAGES
 
 
-def run(targetfile: str, outputfile: str | None, args: ap.Namespace, runOnCompile: bool) -> None:
+def run(targetfile: str, outputfile: str | None, args: ap.Namespace, runOnCompile: bool) -> int:
     if not targetfile:
         print(
             f"{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} "
             f"{c.Colours.RED}Error:{c.Colours.ENDC} No target file specified."
         )
-        return
+        return 2
 
-    plan = plans.build_execution_plan(targetfile, outputfile, args, runOnCompile)
-    if plan is None:
-        return
+    try:
+        plan = plans.build_execution_plan(targetfile, outputfile, args, runOnCompile)
+        if plan is None:
+            return 2
 
-    if getattr(args, 'explain', False):
-        plans.print_explain(args, plan)
+        if getattr(args, 'explain', False):
+            plans.print_explain(args, plan)
 
-    kind = plan['kind']
-    full_path = str(plan['targetfile'])
-    setattr(args, 'resolvedLanguage', plan.get('language_key'))
+        kind = plan['kind']
+        full_path = str(plan['targetfile'])
+        setattr(args, 'resolvedLanguage', plan.get('language_key'))
 
-    if kind == 'python':
-        pyexec.Executor.exec(full_path, str(outputfile or ''), args)
-    elif kind == 'compiled_executor':
-        plan['executor'].exec(full_path, str(plan['outputfile']), args, runOnCompile)
-    elif kind == 'command_compile':
-        cmdexec.Executor.exec(
-            list(plan['compile_cmd']),
-            list(plan['run_cmd'] or []),
-            str(plan['tool_name']),
-            runOnCompile,
+        if kind == 'python':
+            return pyexec.Executor.exec(full_path, str(outputfile or ''), args)
+        elif kind == 'compiled_executor':
+            return plan['executor'].exec(full_path, str(plan['outputfile']), args, runOnCompile)
+        elif kind == 'command_compile':
+            return cmdexec.Executor.exec(
+                list(plan['compile_cmd']),
+                list(plan['run_cmd'] or []),
+                str(plan['tool_name']),
+                runOnCompile,
+            )
+        elif kind == 'sql':
+            return sqlexec.Executor.exec(full_path, str(outputfile or ''), args)
+        elif kind == 'interpreted':
+            return interpexec.Executor.exec(list(plan['run_cmd']), str(plan['tool_name']), args)
+        elif kind == 'binary':
+            return binexec.execbin(
+                targetfile,
+                getattr(args, 'buildDir', None) or 'build',
+                commands.getProgramArgs(args),
+            )
+
+        print(
+            f"{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} "
+            f"{c.Colours.RED}Error:{c.Colours.ENDC} No executor available for {plan['language']}."
         )
-    elif kind == 'sql':
-        sqlexec.Executor.exec(full_path, str(outputfile or ''), args)
-    elif kind == 'interpreted':
-        interpexec.Executor.exec(list(plan['run_cmd']), str(plan['tool_name']), args)
-    elif kind == 'binary':
-        binexec.execbin(targetfile, getattr(args, 'buildDir', None) or 'build', commands.getProgramArgs(args))
+        return 2
+    except subprocess.CalledProcessError as e:
+        return status.commandFailure(e)
+    except FileNotFoundError:
+        return status.missingTool(f"Tool not found in {c.Colours.RED}PATH{c.Colours.ENDC}.")
+    except Exception as e:
+        return status.unexpectedFailure(e)
 
 
 def build(targetfile: str, outputfile: str | None, args: ap.Namespace) -> int:

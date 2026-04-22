@@ -168,6 +168,43 @@ class TestParserAndConfig(unittest.TestCase):
             self.assertFalse(settings.doctorVerbose)
             self.assertEqual(settings.sources['doctorMode'], 'CLI option --quiet')
 
+    def test_doctor_uses_configured_entry_as_target_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            configDir = projectDir / '.mkconfig'
+            sourceDir = projectDir / 'src'
+            configDir.mkdir(parents=True)
+            sourceDir.mkdir(parents=True)
+
+            (configDir / '.mkconfig.toml').write_text(
+                'entry = "src/main.py"\n',
+                encoding='utf-8',
+            )
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['doctor'])
+                settings = config.buildSettings(args)
+
+            self.assertEqual(settings.command, 'doctor')
+            self.assertTrue(settings.targetfile.endswith('/src/main.py'))
+
+    def test_doctor_direct_target_uses_invocation_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            configDir = projectDir / '.mkconfig'
+            configDir.mkdir(parents=True)
+
+            (configDir / '.mkconfig.toml').write_text(
+                'entry = "src/main.c"\n',
+                encoding='utf-8',
+            )
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['doctor', 'script.py'])
+                settings = config.buildSettings(args)
+
+            self.assertEqual(settings.targetfile, str((projectDir / 'script.py').resolve()))
+
 
 if __name__ == '__main__':
     unittest.main()

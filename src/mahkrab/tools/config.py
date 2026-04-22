@@ -31,6 +31,8 @@ class Settings:
     sources: dict[str, str] = field(default_factory=dict)
     doctorQuiet: bool = False
     doctorVerbose: bool = False
+    doctorAll: bool = False
+    doctorLanguages: bool = False
 
 
 def toStringList(value: object) -> list[str]:
@@ -127,13 +129,18 @@ def buildSettings(args: ap.Namespace) -> Settings:
     command = getattr(args, 'command', None)
     entry = configData.get('entry')
     explicitTargetfile = getattr(args, 'targetfile', None)
+    doctorTarget = getattr(args, 'doctorTarget', None) if command == 'doctor' else None
     targetfile = explicitTargetfile
-    if command in ('build', 'run') and not explicitTargetfile:
+    if doctorTarget:
+        targetfile = doctorTarget
+    elif command in ('build', 'run') and not explicitTargetfile:
+        targetfile = entry
+    elif command == 'doctor' and not explicitTargetfile:
         targetfile = entry
 
     resolvedTargetfile = None
     if targetfile:
-        targetBaseDir = invocationDir if explicitTargetfile else rootDir
+        targetBaseDir = invocationDir if explicitTargetfile or doctorTarget else rootDir
         resolvedTargetfile = str(resolvePath(str(targetfile), targetBaseDir))
 
     argsCwd = getattr(args, 'cwd', None)
@@ -244,6 +251,8 @@ def buildSettings(args: ap.Namespace) -> Settings:
         sources=sources,
         doctorQuiet=doctorQuiet,
         doctorVerbose=doctorVerbose,
+        doctorAll=bool(getattr(args, 'doctorAll', False)),
+        doctorLanguages=bool(getattr(args, 'doctorLanguages', False)),
     )
 
     return settings
