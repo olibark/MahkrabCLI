@@ -190,6 +190,14 @@ def normalize_language(language: str | None) -> str | None:
     return LANGUAGE_ALIASES.get(normalized)
 
 
+def aliases_for_language(language_key: str) -> tuple[str, ...]:
+    return tuple(
+        alias
+        for alias, mapped_language in LANGUAGE_ALIASES.items()
+        if mapped_language == language_key
+    )
+
+
 def resolve_language(args: ap.Namespace, ext: str) -> tuple[str | None, str]:
     lang_override = normalize_language(getattr(args, 'lang', None))
     if getattr(args, 'lang', None) and lang_override is None:

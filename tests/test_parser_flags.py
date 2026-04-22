@@ -72,6 +72,36 @@ def test_parses_doctor_verbose_flag() -> None:
     assert args.doctorQuiet is False
 
 
+def test_parses_doctor_all_flag() -> None:
+    args = parser.parse_args(["doctor", "--all"])
+
+    assert args.command == "doctor"
+    assert args.doctorAll is True
+
+
+def test_parses_doctor_languages_flag() -> None:
+    args = parser.parse_args(["doctor", "--languages"])
+
+    assert args.command == "doctor"
+    assert args.doctorLanguages is True
+
+
+def test_parses_doctor_languages_command() -> None:
+    args = parser.parse_args(["doctor", "languages"])
+
+    assert args.command == "doctor"
+    assert args.targetfile is None
+    assert args.doctorLanguages is True
+
+
+def test_parses_doctor_target() -> None:
+    args = parser.parse_args(["doctor", "main.py"])
+
+    assert args.command == "doctor"
+    assert args.targetfile is None
+    assert args.doctorTarget == "main.py"
+
+
 def test_rejects_conflicting_doctor_output_flags() -> None:
     with pytest.raises(SystemExit) as error:
         parser.parse_args(["doctor", "--quiet", "--verbose"])
@@ -179,6 +209,34 @@ def test_file_target_sets_targetfile() -> None:
 
     assert args.command is None
     assert args.targetfile == "script.py"
+
+
+def test_extensionless_file_target_sets_targetfile() -> None:
+    args = parser.parse_args(["hello"])
+
+    assert args.command is None
+    assert args.targetfile == "hello"
+
+
+def test_exe_file_target_sets_targetfile() -> None:
+    args = parser.parse_args(["hello.exe"])
+
+    assert args.command is None
+    assert args.targetfile == "hello.exe"
+
+
+def test_explicit_run_path_is_not_subcommand() -> None:
+    args = parser.parse_args(["./run"])
+
+    assert args.command is None
+    assert args.targetfile == "./run"
+
+
+def test_direct_file_rejects_doctor_quiet_flag() -> None:
+    with pytest.raises(SystemExit) as error:
+        parser.parse_args(["main.py", "--quiet"])
+
+    assert error.value.code == 2
 
 
 def test_unknown_args_without_program_args_exit() -> None:

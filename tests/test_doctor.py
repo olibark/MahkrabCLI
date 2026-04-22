@@ -15,6 +15,7 @@ def make_args(**overrides):
         'compileArgs': [],
         'programArgs': [],
         'buildDir': 'build',
+        'targetfile': None,
         'pythonCmd': 'python3',
         'runOnCompile': False,
         'configPath': None,
@@ -22,6 +23,8 @@ def make_args(**overrides):
         'sources': {'pythonCmd': 'default'},
         'doctorQuiet': False,
         'doctorVerbose': False,
+        'doctorAll': True,
+        'doctorLanguages': False,
     }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -175,3 +178,123 @@ def test_doctor_verbose_prints_generated_commands(monkeypatch, capsys) -> None:
     assert 'mode: compile+run' in output
     assert 'compile command: gcc ' in output
     assert 'run command: ./build/doctor' in output
+
+
+def test_doctor_defaults_to_target_language(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        doctor,
+        'LANGUAGE_TARGETS',
+        (
+            doctor.DiagnosticTarget('python', 'doctor.py'),
+            doctor.DiagnosticTarget('c', 'doctor.c'),
+        ),
+    )
+
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: None if command == 'gcc' else f'/usr/bin/{command}')
+
+    args = make_args(doctorAll=False, targetfile='/tmp/project/main.py')
+
+    assert doctor.run(args) == 0
+
+    output = clean_output(capsys.readouterr().out)
+    assert 'Python: ok' in output
+    assert 'C: missing' not in output
+    assert 'All checked languages are runnable.' in output
+
+
+def test_doctor_quiet_defaults_to_target_language(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        doctor,
+        'LANGUAGE_TARGETS',
+        (
+            doctor.DiagnosticTarget('python', 'doctor.py'),
+            doctor.DiagnosticTarget('c', 'doctor.c'),
+        ),
+    )
+
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: None if command == 'gcc' else f'/usr/bin/{command}')
+
+    args = make_args(doctorAll=False, doctorQuiet=True, targetfile='/tmp/project/main.py')
+
+    assert doctor.run(args) == 0
+
+    output = clean_output(capsys.readouterr().out)
+    assert 'All checked languages are runnable.' in output
+    assert 'Unavailable' not in output
+
+
+def test_doctor_lang_checks_selected_languages(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        doctor,
+        'LANGUAGE_TARGETS',
+        (
+            doctor.DiagnosticTarget('python', 'doctor.py'),
+            doctor.DiagnosticTarget('c', 'doctor.c'),
+            doctor.DiagnosticTarget('cpp', 'doctor.cpp'),
+        ),
+    )
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: f'/usr/bin/{command}')
+
+    args = make_args(doctorAll=False, lang='py,c++')
+
+    assert doctor.run(args) == 0
+
+    output = clean_output(capsys.readouterr().out)
+    assert 'Python: ok' in output
+    assert 'C++: ok' in output
+    assert 'C: ok' not in output
+
+
+def test_doctor_generic_assembly_lang_uses_target_extension(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        doctor,
+        'LANGUAGE_TARGETS',
+        (
+            doctor.DiagnosticTarget('assembly_nasm', 'doctor.asm'),
+            doctor.DiagnosticTarget('assembly_gas', 'doctor.s'),
+        ),
+    )
+    monkeypatch.setattr(doctor.c, 'osName', 'unixlike')
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: f'/usr/bin/{command}')
+
+    args = make_args(doctorAll=False, lang='asm', targetfile='/tmp/project/hello.s')
+
+    assert doctor.run(args) == 0
+
+    output = clean_output(capsys.readouterr().out)
+    assert 'Assembly (GNU assembler): ok' in output
+    assert 'Assembly (NASM): ok' not in output
+
+
+def test_doctor_lang_rejects_unsupported_language(capsys) -> None:
+    args = make_args(doctorAll=False, lang='python,brainfuck')
+
+    assert doctor.run(args) == 2
+
+    raw_output = capsys.readouterr().out
+    output = clean_output(raw_output)
+    assert doctor.c.Colours.RED in raw_output
+    assert 'Unsupported doctor language: brainfuck' in output
+
+
+def test_doctor_without_target_lang_or_all_returns_usage_error(capsys) -> None:
+    args = make_args(doctorAll=False)
+
+    assert doctor.run(args) == 2
+
+    output = clean_output(capsys.readouterr().out)
+    assert 'Doctor needs a target, --lang, or --all.' in output
+
+
+def test_doctor_languages_lists_supported_aliases(capsys) -> None:
+    args = make_args(doctorAll=False, doctorLanguages=True)
+
+    assert doctor.run(args) == 0
+
+    raw_output = capsys.readouterr().out
+    output = clean_output(raw_output)
+    assert doctor.c.Colours.MAGENTA in raw_output
+    assert '[MAHKRAB-CLI] Doctor languages' in output
+    assert 'Python: python, py' in output
+    assert 'C++: cpp, c++, cxx, cc' in output
+    assert 'Assembly (NASM): nasm, assembly, asm' in output

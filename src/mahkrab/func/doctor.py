@@ -47,7 +47,13 @@ class LanguageStatus:
     compile_command: str | None = None
     link_command: str | None = None
     run_command: str | None = None
- 
+
+
+@dataclass(frozen=True)
+class DiagnosticSelection:
+    targets: tuple[DiagnosticTarget, ...]
+    all_languages: bool = False
+
 
 TOOL_SPECS = {
     spec.attr: spec
@@ -211,6 +217,13 @@ TOOL_OVERRIDE_LANGUAGES = {
 }
 
 
+def print_error(message: str) -> None:
+    print(
+        f'{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} '
+        f'{c.Colours.RED}Error:{c.Colours.ENDC} {message}'
+    )
+
+
 def source_for_attr(attr: str, command_value: str, args: ap.Namespace) -> tuple[str, str]:
     if attr == 'PYTHON_PATH':
         return str(getattr(args, 'pythonCmd', command_value)), setting_source(args, 'pythonCmd', 'default')
@@ -350,7 +363,110 @@ def diagnose_language(target: DiagnosticTarget, args: ap.Namespace) -> LanguageS
 
 
 def diagnose(args: ap.Namespace) -> tuple[LanguageStatus, ...]:
-    return tuple(diagnose_language(target, args) for target in LANGUAGE_TARGETS)
+    selection = getattr(args, 'doctorSelection', DiagnosticSelection(LANGUAGE_TARGETS, all_languages=True))
+    return tuple(diagnose_language(target, args) for target in selection.targets)
+
+
+def parse_language_names(value: str) -> tuple[str, ...]:
+    return tuple(part.strip() for part in str(value).split(',') if part.strip())
+
+
+def target_for_language(language_key: str, targetfile: str | None = None) -> DiagnosticTarget | None:
+    target_map = {target.language_key: target for target in LANGUAGE_TARGETS}
+    if language_key == 'assembly':
+        if targetfile:
+            ext = os.path.splitext(str(targetfile))[1].lower()
+            target_language = languages.EXTENSION_LANGUAGE_MAP.get(ext)
+            if target_language in target_map:
+                return target_map[target_language]
+
+        return target_map.get('assembly_nasm')
+
+    return target_map.get(language_key)
+
+
+def selection_from_language_names(
+        value: str,
+        targetfile: str | None = None,
+    ) -> tuple[DiagnosticSelection | None, str | None]:
+    targets: list[DiagnosticTarget] = []
+    seen: set[str] = set()
+
+    for name in parse_language_names(value):
+        language_key = languages.normalize_language(name)
+        if language_key is None:
+            return None, f'Unsupported doctor language: {name}'
+
+        target = target_for_language(language_key, targetfile)
+        if target is None:
+            label = languages.LANGUAGE_LABELS.get(language_key, language_key)
+            return None, f'Doctor does not support language: {label}'
+
+        if target.language_key not in seen:
+            targets.append(target)
+            seen.add(target.language_key)
+
+    if not targets:
+        return None, 'Doctor needs at least one language after --lang.'
+
+    return DiagnosticSelection(tuple(targets)), None
+
+
+def selection_from_target(args: ap.Namespace) -> tuple[DiagnosticSelection | None, str | None]:
+    targetfile = getattr(args, 'targetfile', None)
+    if not targetfile:
+        return None, 'Doctor needs a target, --lang, or --all.'
+
+    ext = os.path.splitext(str(targetfile))[1].lower()
+    language_key = languages.EXTENSION_LANGUAGE_MAP.get(ext)
+    if language_key is None:
+        return None, f'Doctor could not resolve a language for target: {targetfile}'
+
+    target = target_for_language(language_key)
+    if target is None:
+        label = languages.LANGUAGE_LABELS.get(language_key, language_key)
+        return None, f'Doctor does not support language: {label}'
+
+    return DiagnosticSelection((target,)), None
+
+
+def select_targets(args: ap.Namespace) -> tuple[DiagnosticSelection | None, str | None]:
+    if getattr(args, 'doctorAll', False):
+        return DiagnosticSelection(LANGUAGE_TARGETS, all_languages=True), None
+
+    if getattr(args, 'lang', None):
+        return selection_from_language_names(str(getattr(args, 'lang')), getattr(args, 'targetfile', None))
+
+    return selection_from_target(args)
+
+
+def print_languages() -> None:
+    print(f'{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} Doctor languages')
+    for target in LANGUAGE_TARGETS:
+        aliases = list(languages.aliases_for_language(target.language_key))
+        if target.language_key == 'assembly_nasm':
+            aliases.extend(languages.aliases_for_language('assembly'))
+
+        alias_text = ', '.join(dict.fromkeys(aliases)) or target.language_key
+        label = target.label or languages.LANGUAGE_LABELS.get(target.language_key, target.language_key)
+        print(
+            f'  {c.Colours.CYAN}{label}{c.Colours.ENDC}: '
+            f'{c.Colours.BLUE}{alias_text}{c.Colours.ENDC}'
+        )
+
+
+def summary_success_message(all_languages: bool) -> str:
+    if all_languages:
+        return 'All supported languages are runnable.'
+
+    return 'All checked languages are runnable.'
+
+
+def unavailable_label(all_languages: bool) -> str:
+    if all_languages:
+        return 'Unavailable languages'
+
+    return 'Unavailable checked languages'
 
 
 def status_text(ok: bool) -> str:
@@ -374,23 +490,24 @@ def doctor_mode(args: ap.Namespace) -> str:
     return 'default'
 
 
-def print_summary(unavailable: list[str]) -> None:
+def print_summary(unavailable: list[str], all_languages: bool) -> None:
     if unavailable:
         print(
             f'{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} '
-            f'{c.Colours.RED}Unavailable languages:{c.Colours.ENDC} {", ".join(unavailable)}'
+            f'{c.Colours.RED}{unavailable_label(all_languages)}:{c.Colours.ENDC} {", ".join(unavailable)}'
         )
     else:
         print(
             f'{c.Colours.MAGENTA}[MAHKRAB-CLI] -{c.Colours.ENDC} '
-            f'{c.Colours.GREEN}All supported languages are runnable.{c.Colours.ENDC}'
+            f'{c.Colours.GREEN}{summary_success_message(all_languages)}{c.Colours.ENDC}'
         )
 
 
 def print_report(statuses: tuple[LanguageStatus, ...], args: ap.Namespace) -> None:
     unavailable = [status.label for status in statuses if not status.runnable]
+    selection = getattr(args, 'doctorSelection', DiagnosticSelection(LANGUAGE_TARGETS, all_languages=True))
     if getattr(args, 'doctorQuiet', False):
-        print_summary(unavailable)
+        print_summary(unavailable, selection.all_languages)
         return
 
     config_path = getattr(args, 'configPath', None) or 'none'
@@ -420,10 +537,20 @@ def print_report(statuses: tuple[LanguageStatus, ...], args: ap.Namespace) -> No
             print(f'    link command: {status.link_command or "-"}')
             print(f'    run command: {status.run_command or "-"}')
 
-    print_summary(unavailable)
+    print_summary(unavailable, selection.all_languages)
 
 
 def run(args: ap.Namespace) -> int:
+    if getattr(args, 'doctorLanguages', False):
+        print_languages()
+        return 0
+
+    selection, error = select_targets(args)
+    if error:
+        print_error(error)
+        return 2
+
+    setattr(args, 'doctorSelection', selection)
     statuses = diagnose(args)
     print_report(statuses, args)
     return 0 if all(status.runnable for status in statuses) else 1

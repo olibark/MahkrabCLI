@@ -1,6 +1,7 @@
 import os, subprocess, sys, argparse as ap
 
 from mahkrab import constants as c
+from mahkrab.func.executors import status
 from mahkrab.tools.decorators.timers import runtime
 from mahkrab.tools.tooloverride import get_tool_override
 
@@ -17,7 +18,7 @@ class Executor:
         )
         
     @staticmethod
-    def exec(targetfile: str, outputfile: str, args: ap.Namespace) -> None:
+    def exec(targetfile: str, outputfile: str, args: ap.Namespace) -> int:
         full_path = os.path.abspath(targetfile)
         toolOverride = get_tool_override(args)
         compileArgs = list(getattr(args, 'compileArgs', []))
@@ -27,19 +28,13 @@ class Executor:
         
         try:
             Executor.run(run_cmd)
+            return 0
             
         except subprocess.CalledProcessError as e:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} Command failed with return code {e.returncode}.\n"
-            )
+            return status.commandFailure(e)
         except FileNotFoundError: 
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} The {(toolOverride[0] if toolOverride else pythonCmd)} interpreter was not found.\n"
+            return status.missingTool(
+                f"The {(toolOverride[0] if toolOverride else pythonCmd)} interpreter was not found."
             )
         except Exception as e:
-            print(
-                f"\n{c.Colours.MAGENTA}[MAHKRAB-CLI]{c.Colours.ENDC} {c.Colours.RED}"
-                f"Error:{c.Colours.ENDC} An unexpected error occured {e}.\n"
-            )
+            return status.unexpectedFailure(e)
