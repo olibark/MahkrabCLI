@@ -243,6 +243,39 @@ A bare `--` also forwards the rest of the command line as program arguments:
 mk main.c -r -- hello world
 ```
 
+## Assembly Support
+
+Assembly targets on Unix-like systems now get the same kind of lightweight
+dependency help that C already has. Mahkrab scans supported assembly sources
+for obvious `extern`, `call`, `include`, and entry-point markers, then adds
+common compile or link flags automatically when it can.
+
+This applies to:
+
+- NASM: `.asm`, `.nasm`
+- GNU assembler: `.s`, `.S`
+
+Common cases now work without manually remembering linker flags for things such
+as C-runtime style `main` entry points, `pthread`, `libm`, SDL2, `curl`,
+`sqlite3`, OpenSSL, `libpng`, `uuid`, and X11 symbol usage. Preprocessed GNU
+assembler sources (`.S`) also reuse the existing C header-based mapping for
+common `#include` cases where that helps.
+
+Examples:
+
+```bash
+mk hello.asm -r
+mk hello.S --explain
+mk math_demo.s -r
+```
+
+Manual `--compile-args` still work for custom assembler options or more
+advanced toolchain cases:
+
+```bash
+mk hello.S --compile-args "-Iinclude -g" -r
+```
+
 ## Doctor
 
 `mk doctor` checks whether external tools are available on `PATH` or through
