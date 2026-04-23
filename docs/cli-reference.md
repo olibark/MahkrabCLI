@@ -8,6 +8,7 @@ flag. For config-file usage, see the
 
 ```bash
 mk <target> [options]
+mk init [target] [options]
 mk run [options]
 mk build [options]
 mk doctor [target] [options]
@@ -16,14 +17,16 @@ mk doctor [target] [options]
 | Form | Description |
 | --- | --- |
 | `mk <target>` | Runs a direct file target. The language is inferred from the extension unless `--lang` is supplied. |
+| `mk init [target]` | Creates `.mkconfig/mkconfig.toml` for project commands. |
 | `mk run` | Loads the configured `entry` and runs it. Compiled languages are compiled and then run. |
 | `mk build` | Loads the configured `entry` and compiles it without running it. |
 | `mk doctor` | Checks whether required external compiler and interpreter commands are available. |
 
-`run`, `build`, and `doctor` are reserved subcommand names. To run a file with
+`init`, `run`, `build`, and `doctor` are reserved subcommand names. To run a file with
 one of those names, provide an explicit path:
 
 ```bash
+mk ./init
 mk ./run
 ```
 
@@ -39,7 +42,7 @@ These options are accepted by direct targets, `run`, `build`, and `doctor`.
 | `-o`, `--output` | `<file>` | Sets the output path/name for compiled targets. |
 | `--build-dir` | `<dir>` | Sets the directory used for compiled outputs. Defaults to `build`. |
 | `--cwd` | `<dir>` | Runs as if the command started in another directory. |
-| `--config` | `<file>` | Uses a specific config file. If a directory is given, `.mkconfig.toml` is used inside it. |
+| `--config` | `<file>` | Uses a specific config file. If a directory is given, supported config names are checked inside it. |
 | `--python` | `<python>` | Overrides the Python interpreter for Python files. |
 | `--lang` | `<language>` | Forces a language handler instead of resolving by extension. |
 | `--tool` | `<tool>` | Overrides the compiler or interpreter executable for the selected handler. |
@@ -66,10 +69,39 @@ mk README.md --lang python --tool python3.12 --explain
 mk hello
 ```
 
+## `init`
+
+`mk init` creates `.mkconfig/mkconfig.toml`. That file provides the `entry` and
+other defaults used by `mk run`, `mk build`, and `mk doctor`.
+
+```bash
+mk init
+mk init main.py
+mk init --entry src/main.c --lang c --run-on-compile
+mk init --build-dir out --output out/app
+mk init --force
+```
+
+Init options:
+
+| Option | Description |
+| --- | --- |
+| `--entry <file>` | Writes the `entry` key. A positional target, such as `mk init main.py`, is also accepted. |
+| `--lang <language>` | Writes the `lang` key. |
+| `--build-dir <dir>` | Writes the `build_dir` key. Defaults to `build`. |
+| `-o`, `--output <file>` | Writes the `output` key. |
+| `-r`, `--run-on-compile` | Writes `run_on_compile = true`. |
+| `--force` | Overwrites an existing generated config. |
+
+If no entry is provided, `mk init` tries common source names such as
+`src/main.py` or `main.c`. If none is found, it writes a commented placeholder.
+By default, it refuses to overwrite an existing Mahkrab config and exits with
+status `2`.
+
 ## `run`
 
-`mk run` loads the configured `entry` from `.mkconfig.toml`, `.mkconfig`, or a
-file passed with `--config`.
+`mk run` loads the configured `entry` from a discovered Mahkrab config or a file
+passed with `--config`.
 
 ```bash
 mk run
@@ -204,7 +236,8 @@ language, output path, tool override, and generated command plan before running.
 mk run --config ./examples/.mkconfig.toml
 ```
 
-If the value is a directory, `mk` reads `.mkconfig.toml` inside that directory:
+If the value is a directory, `mk` checks the supported config names inside that
+directory and uses the first one it finds:
 
 ```bash
 mk run --config ./examples

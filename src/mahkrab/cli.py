@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 from mahkrab import constants as c
 from mahkrab.func import doctor, og, terry, tree, workflow
-from mahkrab.tools import config, parser
+from mahkrab.tools import config, initconfig, parser
 
 
 def printNoInputError() -> None:
@@ -24,6 +24,9 @@ def printError(message: str) -> None:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
+
+    if args.command == 'init':
+        return initconfig.run(args)
 
     try:
         settings = config.buildSettings(args)
@@ -46,7 +49,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     hasAction = actionRunTarget or actionList or actionOgs or actionTerry or actionDoctor
 
     if args.command in ('build', 'run') and not settings.targetfile:
-        printError("No 'entry' configured in .mkconfig/.mkconfig.toml.")
+        printError("No 'entry' configured in .mkconfig/mkconfig.toml.")
         return 2
 
     if settings.clear and hasAction:
