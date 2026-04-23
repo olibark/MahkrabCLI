@@ -3,6 +3,7 @@ from pathlib import Path
 
 from mahkrab import cli
 from mahkrab.tools import config, parser
+from mahkrab.tools import initconfig
 
 
 def readConfig(path: Path) -> dict:
@@ -47,12 +48,14 @@ def test_init_generated_config_loads_for_run(monkeypatch, tmp_path: Path) -> Non
     source = tmp_path / 'main.py'
     source.write_text('print("ok")\n', encoding='utf-8')
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(initconfig, 'detectHostOs', lambda: 'linux')
 
     assert cli.main(['init', 'main.py']) == 0
 
     settings = config.buildSettings(parser.parse_args(['run']))
     assert settings.configPath == str((tmp_path / '.mkconfig' / 'mkconfig.toml').resolve())
     assert settings.targetfile == str(source.resolve())
+    assert settings.targetOs == 'linux'
 
 
 def test_config_discovery_finds_generated_path(tmp_path: Path) -> None:
@@ -102,6 +105,7 @@ def test_init_force_reports_legacy_file_conflict(monkeypatch, tmp_path: Path, ca
 
 def test_init_writes_supported_runtime_keys(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(initconfig, 'detectHostOs', lambda: 'linux')
 
     assert cli.main(
         [
@@ -121,9 +125,20 @@ def test_init_writes_supported_runtime_keys(monkeypatch, tmp_path: Path) -> None
     data = readConfig(tmp_path / '.mkconfig' / 'mkconfig.toml')
     assert data['entry'] == 'src/main.c'
     assert data['lang'] == 'c'
+    assert data['os'] == 'linux'
     assert data['build_dir'] == 'out'
     assert data['output'] == 'out/app'
     assert data['run_on_compile'] is True
+
+
+def test_init_writes_explicit_target_os(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(initconfig, 'detectHostOs', lambda: 'linux')
+
+    assert cli.main(['init', '--entry', 'src/main.py', '--os', 'windows']) == 0
+
+    data = readConfig(tmp_path / '.mkconfig' / 'mkconfig.toml')
+    assert data['os'] == 'windows'
 
 
 def test_init_infers_common_entry(monkeypatch, tmp_path: Path) -> None:

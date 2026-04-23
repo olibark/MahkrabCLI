@@ -72,6 +72,20 @@ def test_parses_doctor_verbose_flag() -> None:
     assert args.doctorQuiet is False
 
 
+def test_parses_doctor_json_flag() -> None:
+    args = parser.parse_args(["doctor", "--json"])
+
+    assert args.command == "doctor"
+    assert args.doctorJson is True
+
+
+def test_parses_doctor_os_flag() -> None:
+    args = parser.parse_args(["doctor", "--os", "windows"])
+
+    assert args.command == "doctor"
+    assert args.targetOs == "windows"
+
+
 def test_parses_doctor_all_flag() -> None:
     args = parser.parse_args(["doctor", "--all"])
 
@@ -100,6 +114,13 @@ def test_parses_doctor_target() -> None:
     assert args.command == "doctor"
     assert args.targetfile is None
     assert args.doctorTarget == "main.py"
+
+
+def test_parses_init_os_flag() -> None:
+    args = parser.parse_args(["init", "--os", "macos"])
+
+    assert args.command == "init"
+    assert args.targetOs == "macos"
 
 
 def test_rejects_conflicting_doctor_output_flags() -> None:

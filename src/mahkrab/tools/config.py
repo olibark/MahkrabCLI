@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from mahkrab import constants as c
+from mahkrab.tools.targetos import detectHostOs, normalizeTargetOs
 
 
 @dataclass
@@ -18,6 +19,7 @@ class Settings:
     outputfile: str | None = None
     cwd: str = '.'
     lang: str | None = None
+    targetOs: str | None = None
     tool: str | None = None
     pythonCmd: str = c.PYTHON_PATH
     runOnCompile: bool = False
@@ -31,6 +33,7 @@ class Settings:
     sources: dict[str, str] = field(default_factory=dict)
     doctorQuiet: bool = False
     doctorVerbose: bool = False
+    doctorJson: bool = False
     doctorAll: bool = False
     doctorLanguages: bool = False
 
@@ -131,6 +134,22 @@ def getDoctorConfigValue(configData: dict, key: str, default: bool = False) -> b
     return bool(configData.get(f'doctor_{key}', default))
 
 
+def resolvedTargetOs(args: ap.Namespace, configData: dict) -> tuple[str, str]:
+    argsTargetOs = normalizeTargetOs(getattr(args, 'targetOs', None))
+    if argsTargetOs:
+        return argsTargetOs, 'CLI option --os'
+
+    configTargetOsRaw = configData.get('os')
+    if configTargetOsRaw is not None:
+        configTargetOs = normalizeTargetOs(configTargetOsRaw)
+        if configTargetOs is None:
+            raise ValueError(f'Unsupported config os value: {configTargetOsRaw}')
+
+        return configTargetOs, 'config file'
+
+    return detectHostOs(), 'detected host OS'
+
+
 def buildSettings(args: ap.Namespace) -> Settings:
     invocationDir = Path.cwd().resolve()
     requestedConfig = getattr(args, 'config', None)
@@ -224,6 +243,9 @@ def buildSettings(args: ap.Namespace) -> Settings:
     elif configTool:
         sources['tool'] = 'config file'
 
+    targetOs, targetOsSource = resolvedTargetOs(args, configData)
+    sources['targetOs'] = targetOsSource
+
     argsDoctorQuiet = bool(getattr(args, 'doctorQuiet', False))
     argsDoctorVerbose = bool(getattr(args, 'doctorVerbose', False))
     configDoctorQuiet = getDoctorConfigValue(configData, 'quiet')
@@ -256,6 +278,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
         outputfile=str(outputfile) if outputfile else None,
         cwd=str(cwdPath),
         lang=getattr(args, 'lang', None) or configData.get('lang'),
+        targetOs=targetOs,
         tool=argsTool or configTool,
         pythonCmd=str(pythonCmd),
         runOnCompile=runOnCompile,
@@ -269,6 +292,7 @@ def buildSettings(args: ap.Namespace) -> Settings:
         sources=sources,
         doctorQuiet=doctorQuiet,
         doctorVerbose=doctorVerbose,
+        doctorJson=bool(getattr(args, 'doctorJson', False)),
         doctorAll=bool(getattr(args, 'doctorAll', False)),
         doctorLanguages=bool(getattr(args, 'doctorLanguages', False)),
     )

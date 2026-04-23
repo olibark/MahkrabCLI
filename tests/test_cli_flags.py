@@ -222,3 +222,17 @@ def test_cli_returns_error_for_missing_config(monkeypatch, capsys) -> None:
 
     assert cli.main(["run", "--config", "/tmp/.mkconfig.toml"]) == 2
     assert "Config file not found" in capsys.readouterr().out
+
+
+def test_cli_returns_error_for_invalid_config_os(monkeypatch, capsys) -> None:
+    args = make_args(command="doctor")
+
+    monkeypatch.setattr(cli.parser, "parse_args", lambda argv: args)
+    monkeypatch.setattr(
+        cli.config,
+        "buildSettings",
+        lambda parsed: (_ for _ in ()).throw(ValueError("Unsupported config os value: plan9")),
+    )
+
+    assert cli.main(["doctor"]) == 2
+    assert "Unsupported config os value: plan9" in capsys.readouterr().out

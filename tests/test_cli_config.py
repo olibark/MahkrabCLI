@@ -149,6 +149,24 @@ class TestParserAndConfig(unittest.TestCase):
             self.assertTrue(settings.doctorVerbose)
             self.assertEqual(settings.sources['doctorMode'], 'config file')
 
+    def test_doctor_target_os_loads_from_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            configDir = projectDir / '.mkconfig'
+            configDir.mkdir(parents=True)
+
+            (configDir / '.mkconfig.toml').write_text(
+                'os = "windows"\n',
+                encoding='utf-8',
+            )
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['doctor', '--all'])
+                settings = config.buildSettings(args)
+
+            self.assertEqual(settings.targetOs, 'windows')
+            self.assertEqual(settings.sources['targetOs'], 'config file')
+
     def test_doctor_cli_options_win_over_config(self) -> None:
         with tempfile.TemporaryDirectory() as tempDir:
             projectDir = Path(tempDir) / 'project'
@@ -167,6 +185,24 @@ class TestParserAndConfig(unittest.TestCase):
             self.assertTrue(settings.doctorQuiet)
             self.assertFalse(settings.doctorVerbose)
             self.assertEqual(settings.sources['doctorMode'], 'CLI option --quiet')
+
+    def test_doctor_cli_os_wins_over_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            configDir = projectDir / '.mkconfig'
+            configDir.mkdir(parents=True)
+
+            (configDir / '.mkconfig.toml').write_text(
+                'os = "linux"\n',
+                encoding='utf-8',
+            )
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['doctor', '--all', '--os', 'macos'])
+                settings = config.buildSettings(args)
+
+            self.assertEqual(settings.targetOs, 'macos')
+            self.assertEqual(settings.sources['targetOs'], 'CLI option --os')
 
     def test_doctor_uses_configured_entry_as_target_context(self) -> None:
         with tempfile.TemporaryDirectory() as tempDir:

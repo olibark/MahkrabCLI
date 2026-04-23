@@ -2,6 +2,7 @@ import argparse as ap
 import shlex
 import sys
 
+from mahkrab.tools.targetos import SUPPORTED_TARGET_OSES
 from mahkrab.tools.getversion import get_version
 
 COMMANDS = {'build', 'doctor', 'init', 'run'}
@@ -23,6 +24,7 @@ OPTION_TOKENS = {
     '--program-args',
     '-q', '--quiet',
     '--verbose',
+    '--json',
     '--all',
     '--languages',
     '-c', '--clear',
@@ -227,6 +229,19 @@ def addDoctorArgs(parser: ap.ArgumentParser) -> None:
         help='Print extra doctor diagnostics, including generated command plans.',
     )
     parser.add_argument(
+        '--json',
+        dest='doctorJson',
+        action='store_true',
+        help='Doctor: emit machine-readable JSON output.',
+    )
+    parser.add_argument(
+        '--os',
+        dest='targetOs',
+        choices=SUPPORTED_TARGET_OSES,
+        metavar='<os>',
+        help='Doctor: choose install hints for linux, macos, or windows.',
+    )
+    parser.add_argument(
         '--all',
         dest='doctorAll',
         action='store_true',
@@ -256,6 +271,13 @@ def addInitArgs(parser: ap.ArgumentParser) -> None:
         '--lang',
         type=str, metavar='<language>',
         help='Language override written to config',
+    )
+    parser.add_argument(
+        '--os',
+        dest='targetOs',
+        choices=SUPPORTED_TARGET_OSES,
+        metavar='<os>',
+        help='Write the target OS for doctor install hints.',
     )
     parser.add_argument(
         '--build-dir',
@@ -334,6 +356,7 @@ def fillMissingArgs(args: ap.Namespace) -> None:
         'config': None,
         'pythonCmd': None,
         'lang': None,
+        'targetOs': None,
         'tool': None,
         'runOnCompile': False,
         'compileArgsRaw': [],
@@ -342,6 +365,7 @@ def fillMissingArgs(args: ap.Namespace) -> None:
         'programArgs': [],
         'doctorQuiet': False,
         'doctorVerbose': False,
+        'doctorJson': False,
         'doctorAll': False,
         'doctorLanguages': False,
         'force': False,

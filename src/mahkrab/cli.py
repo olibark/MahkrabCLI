@@ -40,6 +40,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     except NotADirectoryError as error:
         printError(str(error))
         return 2
+    except ValueError as error:
+        printError(str(error))
+        return 2
 
     actionRunTarget = bool(settings.targetfile)
     actionList = bool(args.list)
