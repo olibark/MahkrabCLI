@@ -9,6 +9,7 @@ It gives you one command shape across many languages:
 mk hello.py
 mk main.c -r
 mk src/app.js
+mk init main.py
 mk run
 mk build
 mk doctor
@@ -64,13 +65,20 @@ binaries.
 
 Create a project config when you want repeatable commands:
 
+```bash
+mk init src/main.c --lang c --run-on-compile
+```
+
+This creates `.mkconfig/mkconfig.toml`:
+
 ```toml
 entry = "src/main.c"
+lang = "c"
 build_dir = "build"
 run_on_compile = true
 ```
 
-Save that as `.mkconfig.toml`, then run:
+Then run:
 
 ```bash
 mk run
@@ -85,14 +93,16 @@ entry and compiles it without running the output.
 | Command | Purpose |
 | --- | --- |
 | `mk <file>` | Run, interpret, compile, or execute a direct target. |
-| `mk run` | Run the configured `entry` from `.mkconfig.toml` or `.mkconfig`. |
+| `mk init [file]` | Create `.mkconfig/mkconfig.toml` for project commands. |
+| `mk run` | Run the configured `entry` from a Mahkrab config file. |
 | `mk build` | Compile the configured `entry` without running it. |
 | `mk doctor` | Diagnose compiler and interpreter availability. |
 
-The bare names `run`, `build`, and `doctor` are reserved subcommands. If you
+The bare names `init`, `run`, `build`, and `doctor` are reserved subcommands. If you
 have files with those exact names, use an explicit path:
 
 ```bash
+mk ./init
 mk ./run
 mk ./build
 mk ./doctor
@@ -102,7 +112,7 @@ mk ./doctor
 
 | Option | Purpose |
 | --- | --- |
-| `--config <file>` | Use a specific config file. If a directory is given, `mk` looks for `.mkconfig.toml` inside it. |
+| `--config <file>` | Use a specific config file. If a directory is given, `mk` looks for supported config names inside it. |
 | `--cwd <dir>` | Run as if `mk` started from another working directory. |
 | `-o`, `--output <file>` | Set the compiled output path or name. |
 | `--build-dir <dir>` | Set the build output directory. Defaults to `build`. |
@@ -133,10 +143,41 @@ mk build --config ./examples/.mkconfig.toml
 See the [CLI reference](https://github.com/olibark/MahkrabCLI/blob/main/docs/cli-reference.md)
 for the full command and option reference.
 
+## Init
+
+Use `mk init` to create a project config at `.mkconfig/mkconfig.toml`.
+The generated file is TOML and uses the same keys that `mk run` and `mk build`
+read at runtime.
+
+```bash
+mk init
+mk init main.py
+mk init --entry src/main.c --lang c --run-on-compile
+mk init --build-dir out --output out/app
+mk init --force
+```
+
+Options:
+
+| Option | Purpose |
+| --- | --- |
+| `--entry <file>` | Set the configured `entry`. A positional file, such as `mk init main.py`, does the same thing. |
+| `--lang <language>` | Write a `lang` override. |
+| `--build-dir <dir>` | Write `build_dir`. Defaults to `build`. |
+| `-o`, `--output <file>` | Write `output`. |
+| `-r`, `--run-on-compile` | Write `run_on_compile = true`. |
+| `--force` | Overwrite an existing generated config. |
+
+If you do not provide an entry, `mk init` looks for common files such as
+`src/main.py`, `main.py`, `src/main.c`, or `main.c`. When it cannot infer one,
+it writes a short commented placeholder instead. By default it refuses to
+overwrite any discovered Mahkrab config and exits with status `2`.
+
 ## Config Files
 
 `mk run`, `mk build`, and `mk doctor` can read TOML config from:
 
+- `.mkconfig/mkconfig.toml`
 - `.mkconfig/.mkconfig.toml`
 - `.mkconfig.toml`
 - `.mkconfig`

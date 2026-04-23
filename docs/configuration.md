@@ -8,9 +8,10 @@ repeatable inside a project.
 `mk` discovers config files by searching from the current directory up through
 parent directories. In each directory, it checks these paths in order:
 
-1. `.mkconfig/.mkconfig.toml`
-2. `.mkconfig.toml`
-3. `.mkconfig`
+1. `.mkconfig/mkconfig.toml`
+2. `.mkconfig/.mkconfig.toml`
+3. `.mkconfig.toml`
+4. `.mkconfig`
 
 All supported config files are parsed as TOML, including `.mkconfig`.
 
@@ -21,8 +22,8 @@ mk run --config ./path/to/.mkconfig.toml
 mk build --config ./path/to/project
 ```
 
-When `--config` points to a directory, `mk` reads `.mkconfig.toml` inside that
-directory.
+When `--config` points to a directory, `mk` checks the supported config names
+inside that directory and uses the first one it finds.
 
 ## Minimal Config
 
@@ -94,8 +95,8 @@ The config root is the directory that owns the config:
 
 - For `.mkconfig.toml`, the config root is its parent directory.
 - For `.mkconfig`, the config root is its parent directory.
-- For `.mkconfig/.mkconfig.toml`, the config root is the directory containing
-  `.mkconfig`.
+- For `.mkconfig/mkconfig.toml` and `.mkconfig/.mkconfig.toml`, the config root
+  is the directory containing `.mkconfig`.
 
 Relative config values are resolved from that root where applicable. This keeps
 config behavior stable even when you run `mk` from a subdirectory.
@@ -105,7 +106,7 @@ Example layout:
 ```text
 project/
   .mkconfig/
-    .mkconfig.toml
+    mkconfig.toml
   src/
     main.c
 ```
@@ -265,7 +266,7 @@ For projects where you prefer a config directory:
 ```text
 project/
   .mkconfig/
-    .mkconfig.toml
+    mkconfig.toml
   src/
     main.c
 ```

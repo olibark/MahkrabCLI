@@ -51,6 +51,7 @@ def toStringList(value: object) -> list[str]:
 def findConfig(startDir: Path) -> Path | None:
     for dirPath in (startDir, *startDir.parents):
         candidates = (
+            dirPath / '.mkconfig' / 'mkconfig.toml',
             dirPath / '.mkconfig' / '.mkconfig.toml',
             dirPath / '.mkconfig.toml',
             dirPath / '.mkconfig',
@@ -69,7 +70,24 @@ def resolveConfigPath(configArg: str) -> Path:
         configPath = (Path.cwd() / configPath).resolve()
 
     if configPath.is_dir():
-        configPath = configPath / '.mkconfig.toml'
+        if configPath.name == '.mkconfig':
+            candidates = (
+                configPath / 'mkconfig.toml',
+                configPath / '.mkconfig.toml',
+            )
+        else:
+            candidates = (
+                configPath / '.mkconfig' / 'mkconfig.toml',
+                configPath / '.mkconfig' / '.mkconfig.toml',
+                configPath / '.mkconfig.toml',
+                configPath / '.mkconfig',
+            )
+
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate.resolve()
+
+        configPath = candidates[0]
 
     return configPath
 

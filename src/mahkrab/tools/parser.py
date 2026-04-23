@@ -4,7 +4,7 @@ import sys
 
 from mahkrab.tools.getversion import get_version
 
-COMMANDS = {'build', 'doctor', 'run'}
+COMMANDS = {'build', 'doctor', 'init', 'run'}
 SPECIAL_ARG_DESTS = {
     '--compile-args': 'compileArgsRaw',
     '--tool-args': 'compileArgsRaw',
@@ -108,6 +108,7 @@ def createParser() -> ap.ArgumentParser:
         epilog=(
             "Commands: run (compile and run configured entry), "
             "build (compile configured entry only), "
+            "init (create project config), "
             "doctor (diagnose external toolchains)."
         ),
     )
@@ -239,6 +240,47 @@ def addDoctorArgs(parser: ap.ArgumentParser) -> None:
     )
 
 
+def addInitArgs(parser: ap.ArgumentParser) -> None:
+    parser.add_argument(
+        'initTarget',
+        nargs="?",
+        help='Optional entry file for the generated config',
+    )
+    parser.add_argument(
+        '--entry',
+        dest='initEntry',
+        type=str, metavar='<file>',
+        help='Entry file for mk run and mk build',
+    )
+    parser.add_argument(
+        '--lang',
+        type=str, metavar='<language>',
+        help='Language override written to config',
+    )
+    parser.add_argument(
+        '--build-dir',
+        dest='buildDir',
+        type=str, metavar='<dir>',
+        help='Directory for compiled binaries (default: build)',
+    )
+    parser.add_argument(
+        '-o', '--output',
+        type=str, metavar='<file>',
+        help='Output file name written to config',
+    )
+    parser.add_argument(
+        '-r', '--run-on-compile',
+        dest='runOnCompile',
+        action='store_true',
+        help='Run the target file after compilation',
+    )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Overwrite an existing generated config',
+    )
+
+
 def createDirectParser() -> ap.ArgumentParser:
     parser = createParser()
     parser.add_argument(
@@ -263,6 +305,9 @@ def createCommandParser() -> ap.ArgumentParser:
     addSharedArgs(buildParser)
     addUtilityArgs(buildParser)
 
+    initParser = subparsers.add_parser('init', help='Create project config')
+    addInitArgs(initParser)
+
     doctorParser = subparsers.add_parser('doctor', help='Diagnose external toolchains')
     doctorParser.add_argument(
         'doctorTarget',
@@ -279,6 +324,8 @@ def createCommandParser() -> ap.ArgumentParser:
 def fillMissingArgs(args: ap.Namespace) -> None:
     defaults = {
         'target': None,
+        'initTarget': None,
+        'initEntry': None,
         'doctorTarget': None,
         'targetfile': None,
         'output': None,
@@ -297,6 +344,7 @@ def fillMissingArgs(args: ap.Namespace) -> None:
         'doctorVerbose': False,
         'doctorAll': False,
         'doctorLanguages': False,
+        'force': False,
         'clear': False,
         'list': None,
         'ogs': False,
