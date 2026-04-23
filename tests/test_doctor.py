@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from types import SimpleNamespace
 
@@ -11,6 +12,7 @@ ANSI_PATTERN = re.compile(r'\x1b\[[0-9;]*m')
 def make_args(**overrides):
     defaults = {
         'lang': None,
+        'targetOs': 'linux',
         'tool': None,
         'compileArgs': [],
         'programArgs': [],
@@ -20,9 +22,10 @@ def make_args(**overrides):
         'runOnCompile': False,
         'configPath': None,
         'explain': False,
-        'sources': {'pythonCmd': 'default'},
+        'sources': {'pythonCmd': 'default', 'targetOs': 'detected host OS'},
         'doctorQuiet': False,
         'doctorVerbose': False,
+        'doctorJson': False,
         'doctorAll': True,
         'doctorLanguages': False,
     }
@@ -53,6 +56,7 @@ def test_doctor_returns_success_when_all_checked_languages_are_available(monkeyp
     assert doctor.c.Colours.GREEN in raw_output
     assert '[MAHKRAB-CLI] Doctor' in output
     assert 'doctor mode: default (default)' in output
+    assert 'hint os: linux (detected host OS)' in output
     assert 'Python: ok' in output
     assert 'C: ok' in output
     assert 'available=yes' in output
@@ -84,6 +88,8 @@ def test_doctor_returns_failure_and_lists_missing_languages(monkeypatch, capsys)
     assert doctor.c.Colours.RED in raw_output
     assert 'C: missing' in output
     assert 'gcc: value=gcc source=default available=no path=-' in output
+    assert 'Missing tools:' in output
+    assert 'install (linux)=sudo apt install build-essential' in output
     assert 'Unavailable languages: C' in output
 
 
@@ -165,6 +171,8 @@ def test_doctor_quiet_only_prints_summary(monkeypatch, capsys) -> None:
     assert '[MAHKRAB-CLI] Doctor' not in output
     assert 'Python: ok' not in output
     assert 'gcc: value=' not in output
+    assert 'Missing tools:' in output
+    assert 'install (linux)=sudo apt install build-essential' in output
 
 
 def test_doctor_verbose_prints_generated_commands(monkeypatch, capsys) -> None:
@@ -298,3 +306,119 @@ def test_doctor_languages_lists_supported_aliases(capsys) -> None:
     assert 'Python: python, py' in output
     assert 'C++: cpp, c++, cxx, cc' in output
     assert 'Assembly (NASM): nasm, assembly, asm' in output
+
+
+def test_doctor_json_emits_valid_json_without_ansi(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        doctor,
+        'LANGUAGE_TARGETS',
+        (
+            doctor.DiagnosticTarget('python', 'doctor.py'),
+            doctor.DiagnosticTarget('c', 'doctor.c'),
+        ),
+    )
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: None if command == 'gcc' else f'/usr/bin/{command}')
+
+    assert doctor.run(make_args(doctorJson=True)) == 1
+
+    raw_output = capsys.readouterr().out
+    assert ANSI_PATTERN.search(raw_output) is None
+    payload = json.loads(raw_output)
+    assert payload['ok'] is False
+    assert payload['os'] == 'linux'
+    assert payload['detected_os'] == 'linux'
+    assert payload['os_source'] == 'detected host OS'
+    assert payload['checked_languages'] == ['python', 'c']
+
+    tools = {tool['tool']: tool for tool in payload['checked_tools']}
+    assert tools['python']['status'] == 'installed'
+    assert tools['python']['resolved_path'] == '/usr/bin/python3'
+    assert tools['gcc']['status'] == 'missing'
+    assert tools['gcc']['languages'] == ['c']
+    assert tools['gcc']['recommended_hint'] == 'sudo apt install build-essential'
+    assert tools['gcc']['install_hints'] == {'linux': ['sudo apt install build-essential']}
+
+
+def test_doctor_json_reports_installed_tool_state(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(doctor, 'LANGUAGE_TARGETS', (doctor.DiagnosticTarget('python', 'doctor.py'),))
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: f'/usr/bin/{command}')
+
+    assert doctor.run(make_args(doctorJson=True)) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload['ok'] is True
+    assert payload['checked_tools'] == [
+        {
+            'command': 'python3',
+            'install_hints': {
+                'linux': ['sudo apt install python3'],
+            },
+            'languages': ['python'],
+            'recommended_hint': None,
+            'resolved_path': '/usr/bin/python3',
+            'source': 'default',
+            'status': 'installed',
+            'tool': 'python',
+            'value': 'python3',
+        }
+    ]
+
+
+def test_doctor_json_uses_os_specific_recommended_hint(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(doctor, 'LANGUAGE_TARGETS', (doctor.DiagnosticTarget('c', 'doctor.c'),))
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: None)
+
+    assert doctor.run(make_args(doctorJson=True, targetOs='macos', sources={'pythonCmd': 'default', 'targetOs': 'CLI option --os'})) == 1
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload['os'] == 'macos'
+    assert payload['os_source'] == 'CLI option --os'
+    assert payload['checked_tools'][0]['recommended_hint'] == 'xcode-select --install'
+    assert payload['checked_tools'][0]['install_hints'] == {'macos': ['xcode-select --install']}
+
+
+def test_doctor_json_usage_error_stays_json(monkeypatch, capsys) -> None:
+    assert doctor.run(make_args(doctorAll=False, doctorJson=True)) == 2
+
+    raw_output = capsys.readouterr().out
+    assert ANSI_PATTERN.search(raw_output) is None
+    payload = json.loads(raw_output)
+    assert payload['ok'] is False
+    assert payload['error'] == 'Doctor needs a target, --lang, or --all.'
+    assert payload['checked_tools'] == []
+
+
+def test_doctor_json_wins_over_quiet_and_lang_selection(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        doctor,
+        'LANGUAGE_TARGETS',
+        (
+            doctor.DiagnosticTarget('python', 'doctor.py'),
+            doctor.DiagnosticTarget('c', 'doctor.c'),
+        ),
+    )
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: f'/usr/bin/{command}')
+
+    args = make_args(doctorAll=False, doctorJson=True, doctorQuiet=True, lang='py')
+
+    assert doctor.run(args) == 0
+
+    raw_output = capsys.readouterr().out
+    payload = json.loads(raw_output)
+    assert payload['checked_languages'] == ['python']
+    assert 'All checked languages are runnable.' not in raw_output
+    assert '[MAHKRAB-CLI]' not in raw_output
+
+
+def test_doctor_uses_detected_host_os_when_no_config_or_override(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(doctor, 'LANGUAGE_TARGETS', (doctor.DiagnosticTarget('c', 'doctor.c'),))
+    monkeypatch.setattr(doctor, 'detectHostOs', lambda: 'windows')
+    monkeypatch.setattr(doctor.shutil, 'which', lambda command: None)
+
+    assert doctor.run(make_args(targetOs=None, doctorJson=True, sources={'pythonCmd': 'default'})) == 1
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload['os'] == 'windows'
+    assert payload['detected_os'] == 'windows'
+    assert payload['os_source'] == 'detected host OS'
+    assert payload['checked_tools'][0]['recommended_hint'].startswith('Install MSYS2')

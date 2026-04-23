@@ -74,6 +74,7 @@ This creates `.mkconfig/mkconfig.toml`:
 ```toml
 entry = "src/main.c"
 lang = "c"
+os = "linux"
 build_dir = "build"
 run_on_compile = true
 ```
@@ -153,6 +154,7 @@ read at runtime.
 mk init
 mk init main.py
 mk init --entry src/main.c --lang c --run-on-compile
+mk init --os windows
 mk init --build-dir out --output out/app
 mk init --force
 ```
@@ -163,6 +165,7 @@ Options:
 | --- | --- |
 | `--entry <file>` | Set the configured `entry`. A positional file, such as `mk init main.py`, does the same thing. |
 | `--lang <language>` | Write a `lang` override. |
+| `--os <os>` | Write `os` for doctor install hints. Supported values: `linux`, `macos`, `windows`. |
 | `--build-dir <dir>` | Write `build_dir`. Defaults to `build`. |
 | `-o`, `--output <file>` | Write `output`. |
 | `-r`, `--run-on-compile` | Write `run_on_compile = true`. |
@@ -191,6 +194,7 @@ build_dir = "build"
 output = "build/main"
 python = "python3"
 lang = "python"
+os = "linux"
 tool = "python3.12"
 run_on_compile = true
 clear = false
@@ -243,14 +247,18 @@ mk main.c -r -- hello world
 
 `mk doctor` checks whether external tools are available on `PATH` or through
 configured overrides. It needs a configured `entry`, a direct target, `--lang`,
-or `--all`.
+or `--all`. When something is missing, doctor now prints a short OS-aware
+install hint so onboarding is more actionable. Doctor resolves the hint OS in
+this order: `--os`, then mkconfig `os`, then the current machine OS.
 
 ```bash
 mk doctor
 mk doctor src/main.py
 mk doctor --lang python,c,cpp
 mk doctor --all
+mk doctor --os windows
 mk doctor --quiet
+mk doctor --json
 mk doctor --verbose
 mk doctor --languages
 ```
@@ -260,6 +268,54 @@ Doctor exits with:
 - `0` when all checked toolchains are available.
 - `1` when one or more checked toolchains are missing.
 - `2` for usage or configuration errors.
+
+Normal terminal output keeps the coloured Mahkrab summary and adds a compact
+missing-tools section:
+
+```text
+[MAHKRAB-CLI] Doctor
+  config: /project/.mkconfig/mkconfig.toml
+  cwd: /project
+  doctor mode: default (default)
+  hint os: linux (config file)
+  C: missing
+    - gcc: value=gcc source=default available=no path=-
+  Missing tools:
+    - gcc: languages=C install (linux)=sudo apt install build-essential
+[MAHKRAB-CLI] - Unavailable checked languages: C
+```
+
+Use `mk doctor --json` for scripting, CI, or editor integrations. It prints
+JSON only, with no ANSI colour codes or extra text:
+
+```json
+{
+  "checked_languages": ["python", "c"],
+  "checked_tools": [
+    {
+      "command": "gcc",
+      "install_hints": {
+        "windows": ["Install MSYS2 or Visual Studio Build Tools and add the compiler bin directory to PATH"]
+      },
+      "languages": ["c"],
+      "recommended_hint": "Install MSYS2 or Visual Studio Build Tools and add the compiler bin directory to PATH",
+      "resolved_path": null,
+      "source": "default",
+      "status": "missing",
+      "tool": "gcc",
+      "value": "gcc"
+    }
+  ],
+  "detected_os": "linux",
+  "ok": false,
+  "os": "windows",
+  "os_source": "config file"
+}
+```
+
+`--json` composes with the normal doctor selectors such as `--all`, `--lang`,
+and `--os`. If `--json` is combined with human-oriented output flags like
+`--quiet`, JSON still wins so the output stays machine-readable.
 
 ## Supported Languages
 

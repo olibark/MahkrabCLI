@@ -7,6 +7,7 @@ from pathlib import Path
 from mahkrab import constants as c
 from mahkrab.func import languages
 from mahkrab.tools import config
+from mahkrab.tools.targetos import detectHostOs
 
 CONFIG_DIR = '.mkconfig'
 CONFIG_FILE = 'mkconfig.toml'
@@ -107,6 +108,7 @@ def selectedEntry(args: ap.Namespace, projectDir: Path) -> str | None:
 
 def buildConfigContents(args: ap.Namespace, projectDir: Path) -> str:
     entry = selectedEntry(args, projectDir)
+    targetOs = str(getattr(args, 'targetOs', None) or detectHostOs())
     lines = [
         '# Mahkrab project config',
         '# Used by mk run and mk build.',
@@ -121,6 +123,8 @@ def buildConfigContents(args: ap.Namespace, projectDir: Path) -> str:
     lang = getattr(args, 'lang', None)
     if lang:
         lines.append(f'lang = {tomlString(str(lang))}')
+
+    lines.append(f'os = {tomlString(targetOs)}')
 
     lines.append(f'build_dir = {tomlString(str(getattr(args, "buildDir", None) or "build"))}')
 
