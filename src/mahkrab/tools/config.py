@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import argparse as ap
+import json
+import math
 import os
 import shlex
+import tempfile
 import tomllib
+from datetime import date, datetime, time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -126,6 +130,149 @@ def loadConfig(configPath: Path | None) -> dict:
     return data
 
 
+def resolvedConfig(configArg: str | None, startDir: Path | None = None) -> Path | None:
+    if configArg:
+        configPath = resolveConfigPath(configArg)
+        if configPath.is_file():
+            return configPath.resolve()
+
+        return None
+
+    baseDir = (startDir or Path.cwd()).resolve()
+    return findConfig(baseDir)
+
+
+def tomlKey(key: str) -> str:
+    if key.replace('-', '').replace('_', '').isalnum():
+        return key
+
+    return json.dumps(key)
+
+
+def tomlValue(value: object) -> str:
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+
+    if isinstance(value, str):
+        return json.dumps(value)
+
+    if isinstance(value, int):
+        return str(value)
+
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError('Cannot write non-finite float values to TOML.')
+
+        return repr(value)
+
+    if isinstance(value, datetime):
+        return value.isoformat()
+
+    if isinstance(value, date):
+        return value.isoformat()
+
+    if isinstance(value, time):
+        return value.isoformat()
+
+    if isinstance(value, list):
+        return '[' + ', '.join(tomlValue(item) for item in value) + ']'
+
+    raise ValueError(f'Unsupported config value type: {type(value).__name__}')
+
+
+def preferredScalarKeys(tablePath: tuple[str, ...]) -> list[str]:
+    if not tablePath:
+        return [
+            'entry',
+            'cwd',
+            'build_dir',
+            'output',
+            'python',
+            'python_cmd',
+            'lang',
+            'os',
+            'tool',
+            'run_on_compile',
+            'clear',
+            'compile_args',
+            'tool_args',
+            'program_args',
+            'doctor_quiet',
+            'doctor_verbose',
+        ]
+
+    if tablePath == ('doctor',):
+        return ['quiet', 'verbose']
+
+    return []
+
+
+def preferredTableKeys(tablePath: tuple[str, ...]) -> list[str]:
+    if not tablePath:
+        return ['doctor', 'env']
+
+    return []
+
+
+def orderedKeys(keys: list[str], preferred: list[str]) -> list[str]:
+    return [key for key in preferred if key in keys] + sorted(
+        key for key in keys if key not in preferred
+    )
+
+
+def appendTomlTable(lines: list[str], tablePath: tuple[str, ...], tableData: dict) -> None:
+    scalarKeys = orderedKeys(
+        [str(key) for key, value in tableData.items() if not isinstance(value, dict)],
+        preferredScalarKeys(tablePath),
+    )
+    tableKeys = orderedKeys(
+        [str(key) for key, value in tableData.items() if isinstance(value, dict)],
+        preferredTableKeys(tablePath),
+    )
+
+    if tablePath:
+        if lines:
+            lines.append('')
+        lines.append('[' + '.'.join(tomlKey(part) for part in tablePath) + ']')
+
+    for key in scalarKeys:
+        lines.append(f'{tomlKey(key)} = {tomlValue(tableData[key])}')
+
+    for key in tableKeys:
+        value = tableData[key]
+        if not isinstance(value, dict):
+            raise ValueError(f'Config table {key} must be a TOML table.')
+
+        appendTomlTable(lines, (*tablePath, key), value)
+
+
+def dumpConfig(configData: dict) -> str:
+    if not isinstance(configData, dict):
+        raise ValueError('Config file must parse to a table.')
+
+    lines: list[str] = []
+    appendTomlTable(lines, (), configData)
+    return '\n'.join(lines).rstrip() + '\n'
+
+
+def writeConfig(configPath: Path, configData: dict) -> None:
+    configPath.parent.mkdir(parents=True, exist_ok=True)
+    serialized = dumpConfig(configData)
+
+    with tempfile.NamedTemporaryFile(
+        'w',
+        encoding='utf-8',
+        dir=configPath.parent,
+        prefix=f'{configPath.name}.',
+        suffix='.tmp',
+        delete=False,
+    ) as tempFile:
+        tempFile.write(serialized)
+        tempPath = Path(tempFile.name)
+
+    os.replace(tempPath, configPath)
+
+
 def getDoctorConfigValue(configData: dict, key: str, default: bool = False) -> bool:
     doctorData = configData.get('doctor', {})
     if isinstance(doctorData, dict) and key in doctorData:
@@ -164,6 +311,17 @@ def buildSettings(args: ap.Namespace) -> Settings:
     rootDir = configRoot(configPath)
 
     command = getattr(args, 'command', None)
+    argsCwd = getattr(args, 'cwd', None)
+    configCwd = configData.get('cwd')
+    if argsCwd:
+        cwdPath = resolvePath(str(argsCwd), invocationDir)
+    elif configCwd:
+        cwdPath = resolvePath(str(configCwd), rootDir)
+    elif command in ('build', 'run') and configPath is not None:
+        cwdPath = rootDir
+    else:
+        cwdPath = invocationDir
+
     entry = configData.get('entry')
     explicitTargetfile = getattr(args, 'targetfile', None)
     doctorTarget = getattr(args, 'doctorTarget', None) if command == 'doctor' else None
@@ -177,19 +335,13 @@ def buildSettings(args: ap.Namespace) -> Settings:
 
     resolvedTargetfile = None
     if targetfile:
-        targetBaseDir = invocationDir if explicitTargetfile or doctorTarget else rootDir
+        if (explicitTargetfile or doctorTarget) and argsCwd:
+            targetBaseDir = cwdPath
+        elif explicitTargetfile or doctorTarget:
+            targetBaseDir = invocationDir
+        else:
+            targetBaseDir = rootDir
         resolvedTargetfile = str(resolvePath(str(targetfile), targetBaseDir))
-
-    argsCwd = getattr(args, 'cwd', None)
-    configCwd = configData.get('cwd')
-    if argsCwd:
-        cwdPath = resolvePath(str(argsCwd), invocationDir)
-    elif configCwd:
-        cwdPath = resolvePath(str(configCwd), rootDir)
-    elif command in ('build', 'run') and configPath is not None:
-        cwdPath = rootDir
-    else:
-        cwdPath = invocationDir
 
     buildDir = str(getattr(args, 'buildDir', None) or configData.get('build_dir', 'build'))
     outputfile = getattr(args, 'output', None) or configData.get('output')
@@ -313,6 +465,13 @@ def prepareRuntime(settings: Settings) -> Settings:
             buildPath = cwdPath / buildPath
 
         buildPath.mkdir(parents=True, exist_ok=True)
+
+        if settings.outputfile:
+            outputPath = Path(settings.outputfile).expanduser()
+            if not outputPath.is_absolute():
+                outputPath = cwdPath / outputPath
+
+            outputPath.parent.mkdir(parents=True, exist_ok=True)
 
     if settings.env:
         os.environ.update(settings.env)

@@ -12,6 +12,7 @@ mk src/app.js
 mk init main.py
 mk run
 mk build
+mk config
 mk doctor
 ```
 
@@ -97,15 +98,17 @@ entry and compiles it without running the output.
 | `mk init [file]` | Create `.mkconfig/mkconfig.toml` for project commands. |
 | `mk run` | Run the configured `entry` from a Mahkrab config file. |
 | `mk build` | Compile the configured `entry` without running it. |
+| `mk config` | Show the resolved config file and read or update supported config keys. |
 | `mk doctor` | Diagnose compiler and interpreter availability. |
 
-The bare names `init`, `run`, `build`, and `doctor` are reserved subcommands. If you
+The bare names `init`, `run`, `build`, `config`, and `doctor` are reserved subcommands. If you
 have files with those exact names, use an explicit path:
 
 ```bash
 mk ./init
 mk ./run
 mk ./build
+mk ./config
 mk ./doctor
 ```
 
@@ -221,6 +224,48 @@ Important rules:
 See the [configuration guide](https://github.com/olibark/MahkrabCLI/blob/main/docs/configuration.md)
 for discovery rules, key-by-key reference, and precedence details.
 
+## Config Command
+
+Use `mk config` to inspect the config file Mahkrab resolved and to read or
+update supported config keys without opening the TOML file manually. The output
+uses the normal coloured Mahkrab conventions.
+
+```bash
+mk config
+mk config --config ./examples/.mkconfig.toml
+mk config --entry
+mk config --entry src/main.c
+mk config --run-on-compile true
+mk config --compile-args "-O2 -Wall"
+mk config --env FOO=bar
+```
+
+Getter flags print the current configured value. The same flag becomes a setter
+when you pass a value:
+
+- `--entry`
+- `--cwd`
+- `--build-dir`
+- `-o`, `--output`
+- `--python`
+- `--lang`
+- `--tool`
+- `-r`, `--run-on-compile`
+- `-c`, `--clear`
+- `--compile-args`
+- `--program-args`
+
+Boolean setters accept `true`, `false`, `1`, or `0`. `--compile-args` and
+`--program-args` accept a quoted shell-style string and store the parsed result
+as a TOML string array. `--env KEY=VALUE` adds or replaces entries in the
+`[env]` table.
+
+Use `--config <file>` with `mk config` to read or update a specific config
+instead of the discovered one. If no config exists, `mk config` exits with
+status `2` and tells you to create one with `mk init`. Config updates preserve
+existing keys and rewrite the TOML file deterministically, but comments and
+original formatting may be normalized.
+
 ## Passing Arguments
 
 Use `--compile-args` for flags that belong to the compiler or interpreter:
@@ -241,6 +286,39 @@ A bare `--` also forwards the rest of the command line as program arguments:
 
 ```bash
 mk main.c -r -- hello world
+```
+
+## Assembly Support
+
+Assembly targets on Unix-like systems now get the same kind of lightweight
+dependency help that C already has. Mahkrab scans supported assembly sources
+for obvious `extern`, `call`, `include`, and entry-point markers, then adds
+common compile or link flags automatically when it can.
+
+This applies to:
+
+- NASM: `.asm`, `.nasm`
+- GNU assembler: `.s`, `.S`
+
+Common cases now work without manually remembering linker flags for things such
+as C-runtime style `main` entry points, `pthread`, `libm`, SDL2, `curl`,
+`sqlite3`, OpenSSL, `libpng`, `uuid`, and X11 symbol usage. Preprocessed GNU
+assembler sources (`.S`) also reuse the existing C header-based mapping for
+common `#include` cases where that helps.
+
+Examples:
+
+```bash
+mk hello.asm -r
+mk hello.S --explain
+mk math_demo.s -r
+```
+
+Manual `--compile-args` still work for custom assembler options or more
+advanced toolchain cases:
+
+```bash
+mk hello.S --compile-args "-Iinclude -g" -r
 ```
 
 ## Doctor
@@ -370,6 +448,8 @@ python -m pip install -e '.[dev]'
 mk -h
 pytest tests
 ```
+
+MahkrabCLI supports Python 3.11 and newer.
 
 ### Internal Layout
 

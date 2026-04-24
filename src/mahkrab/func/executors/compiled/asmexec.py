@@ -7,6 +7,7 @@ import argparse as ap
 from dataclasses import dataclass, field
 
 from mahkrab.tools.decorators.timers import compileruntime, compiletime
+from mahkrab.tools.asm import findDependencies
 from mahkrab import constants as c
 from mahkrab.func.executors import status
 from mahkrab.tools.tooloverride import apply_tool_override
@@ -141,35 +142,70 @@ def build_compile_command(
         variant: AssemblyVariant,
         full_path: str,
         objfile: str,
+        inferred_compile_flags: list[str],
         compile_args: list[str],
         args: ap.Namespace,
     ) -> list[str]:
+    resolved_compile_args = [*inferred_compile_flags, *compile_args]
+
     if variant.compile_mode == 'nasm':
         object_format = variant.object_format_by_os[c.osName]
-        cmd = [c.NASM_PATH, *compile_args, '-f', object_format, full_path, '-o', objfile]
+        cmd = [c.NASM_PATH, *resolved_compile_args, '-f', object_format, full_path, '-o', objfile]
         return apply_tool_override(cmd, args)
 
     if variant.compile_mode == 'gas':
         ext = os.path.splitext(full_path)[1]
         if ext in variant.preprocess_extensions:
-            cmd = [c.GCC_PATH, *compile_args, '-c', full_path, '-o', objfile]
+            cmd = [c.GCC_PATH, *resolved_compile_args, '-c', full_path, '-o', objfile]
         else:
             object_format = variant.object_format_by_os.get(c.osName)
             cmd = [c.AS_PATH]
             if object_format:
                 cmd.append(object_format)
-            cmd.extend([*compile_args, full_path, '-o', objfile])
+            cmd.extend([*resolved_compile_args, full_path, '-o', objfile])
 
         return apply_tool_override(cmd, args)
 
     raise ValueError(f'Unsupported assembly compile mode: {variant.compile_mode}')
 
 
-def build_link_command(variant: AssemblyVariant, objfile: str, outputfile: str) -> list[str]:
-    link_mode = variant.link_mode_by_os[c.osName]
+def split_link_flags(link_flags: list[str]) -> tuple[list[str], list[str]]:
+    option_flags: list[str] = []
+    library_flags: list[str] = []
+
+    index = 0
+    while index < len(link_flags):
+        flag = link_flags[index]
+
+        if flag == '-framework' and index + 1 < len(link_flags):
+            library_flags.extend([flag, link_flags[index + 1]])
+            index += 2
+            continue
+
+        if flag.startswith(('-l', '-L', '-Wl,')) or flag == '-pthread':
+            library_flags.append(flag)
+        else:
+            option_flags.append(flag)
+
+        index += 1
+
+    return option_flags, library_flags
+
+
+def build_link_command(
+        variant: AssemblyVariant,
+        objfile: str,
+        outputfile: str,
+        link_mode: str,
+        link_flags: list[str],
+    ) -> list[str]:
+    option_flags, library_flags = split_link_flags(link_flags)
 
     if link_mode == 'ld':
-        return [c.LD_PATH, '-o', outputfile, objfile]
+        return [c.LD_PATH, *option_flags, '-o', outputfile, objfile, *library_flags]
+
+    if link_mode == 'gcc':
+        return [c.GCC_PATH, *option_flags, objfile, *library_flags, '-o', outputfile]
 
     raise ValueError(f'Unsupported assembly link mode: {link_mode}')
 
@@ -189,9 +225,18 @@ def build_plan(
     objfile = f'{resolved_output}.o'
     compile_args = list(getattr(args, 'compileArgs', []))
     program_args = list(getattr(args, 'programArgs', []))
+    dependencies = findDependencies.findDependencies(full_path)
 
-    compile_cmd = build_compile_command(variant, full_path, objfile, compile_args, args)
-    link_cmd = build_link_command(variant, objfile, resolved_output)
+    compile_cmd = build_compile_command(
+        variant,
+        full_path,
+        objfile,
+        dependencies.compile_flags,
+        compile_args,
+        args,
+    )
+    link_mode = dependencies.link_mode or variant.link_mode_by_os[c.osName]
+    link_cmd = build_link_command(variant, objfile, resolved_output, link_mode, dependencies.link_flags)
 
     return {
         'language_key': variant.key,

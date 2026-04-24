@@ -118,7 +118,7 @@ def test_workflow_run_propagates_executor_exit_code(monkeypatch, tmp_path: Path)
 
 
 def test_cli_targetfile_returns_workflow_run_exit_code(monkeypatch) -> None:
-    args = SimpleNamespace(command=None, list=None, ogs=False, terry=False)
+    args = SimpleNamespace(command=None, ogs=False, terry=False)
     settings = SimpleNamespace(
         targetfile='/tmp/fail.py',
         outputfile='build/fail',
@@ -135,7 +135,7 @@ def test_cli_targetfile_returns_workflow_run_exit_code(monkeypatch) -> None:
 
 
 def test_cli_run_command_returns_workflow_run_exit_code(monkeypatch) -> None:
-    args = SimpleNamespace(command='run', list=None, ogs=False, terry=False)
+    args = SimpleNamespace(command='run', ogs=False, terry=False)
     settings = SimpleNamespace(
         targetfile='/tmp/fail.py',
         outputfile='build/fail',

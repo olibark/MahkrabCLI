@@ -7,6 +7,7 @@ import pytest
 
 from mahkrab.func import languages, plans
 from mahkrab.func.executors.compiled import asmexec
+from mahkrab.tools.asm import findDependencies as asm_find_dependencies
 
 
 def make_args(**overrides):
@@ -202,3 +203,162 @@ def test_gas_executor_builds_compile_and_link_commands(assembly_tools, monkeypat
         'compile_cmd': ['gcc', '-Iinclude', '-c', '/tmp/hello.S', '-o', 'build/hello.o'],
         'link_cmd': ['ld', '-o', 'build/hello', 'build/hello.o'],
     }
+
+
+def test_assembly_dependency_finder_deduplicates_flags(tmp_path) -> None:
+    source = tmp_path / 'hello.asm'
+    source.write_text(
+        '\n'.join(
+            (
+                'global main',
+                'extern printf',
+                'extern pthread_create',
+                'extern pthread_join',
+                'extern sin',
+                'call pthread_create',
+                'call pthread_join',
+                'call sin',
+            )
+        ),
+        encoding='utf-8',
+    )
+
+    dependencies = asm_find_dependencies.findDependencies(str(source))
+
+    assert dependencies.compile_flags == []
+    assert dependencies.link_mode == 'gcc'
+    assert dependencies.link_flags == ['-no-pie', '-pthread', '-lm']
+
+
+def test_nasm_plan_includes_inferred_dependency_flags(assembly_tools, tmp_path) -> None:
+    source = tmp_path / 'hello.asm'
+    source.write_text(
+        '\n'.join(
+            (
+                'global main',
+                'extern SDL_Init',
+                'extern printf',
+                'call SDL_Init',
+                'call printf',
+            )
+        ),
+        encoding='utf-8',
+    )
+
+    args = make_args()
+    plan = plans.build_execution_plan(str(source), None, args, False)
+
+    assert plan is not None
+    assert plan['compile_cmd'] == [
+        'nasm',
+        '-f',
+        'elf64',
+        str(source),
+        '-o',
+        'build/hello.o',
+    ]
+    assert plan['link_cmd'] == [
+        'gcc',
+        '-no-pie',
+        'build/hello.o',
+        '-lSDL2',
+        '-o',
+        'build/hello',
+    ]
+
+
+def test_gas_plan_includes_inferred_dependency_flags(assembly_tools, tmp_path) -> None:
+    source = tmp_path / 'hello.S'
+    source.write_text(
+        '\n'.join(
+            (
+                '#include <pthread.h>',
+                '.globl main',
+                'main:',
+                '    call pthread_create',
+            )
+        ),
+        encoding='utf-8',
+    )
+
+    args = make_args()
+    plan = plans.build_execution_plan(str(source), None, args, False)
+
+    assert plan is not None
+    assert plan['compile_cmd'] == [
+        'gcc',
+        '-pthread',
+        '-c',
+        str(source),
+        '-o',
+        'build/hello.o',
+    ]
+    assert plan['link_cmd'] == [
+        'gcc',
+        '-no-pie',
+        'build/hello.o',
+        '-pthread',
+        '-o',
+        'build/hello',
+    ]
+
+
+def test_explain_output_includes_inferred_assembly_dependency_flags(assembly_tools, tmp_path, capsys) -> None:
+    source = tmp_path / 'hello.s'
+    source.write_text(
+        '\n'.join(
+            (
+                '.globl main',
+                'main:',
+                '    call sqrt',
+            )
+        ),
+        encoding='utf-8',
+    )
+
+    args = make_args(runOnCompile=True)
+    plan = plans.build_execution_plan(str(source), None, args, True)
+
+    assert plan is not None
+    plans.print_explain(args, plan)
+    output = capsys.readouterr().out
+
+    assert 'compile command: as --64' in output
+    assert 'link command: gcc -no-pie build/hello.o -lm -o build/hello' in output
+
+
+def test_manual_compile_args_compose_with_inferred_dependency_flags(assembly_tools, tmp_path) -> None:
+    source = tmp_path / 'hello.S'
+    source.write_text(
+        '\n'.join(
+            (
+                '#include <pthread.h>',
+                '.globl main',
+                'main:',
+                '    call pthread_create',
+            )
+        ),
+        encoding='utf-8',
+    )
+
+    args = make_args(compileArgs=['-Iinclude'])
+    plan = plans.build_execution_plan(str(source), None, args, False)
+
+    assert plan is not None
+    assert plan['compile_cmd'] == [
+        'gcc',
+        '-pthread',
+        '-Iinclude',
+        '-c',
+        str(source),
+        '-o',
+        'build/hello.o',
+    ]
+    assert plan['link_cmd'] == [
+        'gcc',
+        '-no-pie',
+        'build/hello.o',
+        '-pthread',
+        '-o',
+        'build/hello',
+    ]

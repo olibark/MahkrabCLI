@@ -137,20 +137,6 @@ def test_parses_clear_flag(flag: str) -> None:
     assert args.clear is True
 
 
-@pytest.mark.parametrize("flag", ["-ls", "--list"])
-def test_parses_list_flag_with_default_level(flag: str) -> None:
-    args = parser.parse_args([flag])
-
-    assert args.list == 1
-
-
-@pytest.mark.parametrize("flag", ["-ls", "--list"])
-def test_parses_list_flag_with_explicit_level(flag: str) -> None:
-    args = parser.parse_args([flag, "3"])
-
-    assert args.list == 3
-
-
 @pytest.mark.parametrize(
     "flag, field",
     [
@@ -225,6 +211,20 @@ def test_doctor_command_sets_command_instead_of_targetfile() -> None:
     assert args.targetfile is None
 
 
+def test_config_command_sets_command_and_getter_value() -> None:
+    args = parser.parse_args(["config", "--entry"])
+
+    assert args.command == "config"
+    assert args.configEntry is parser.CONFIG_GETTER
+
+
+def test_config_command_entry_setter_parses_value() -> None:
+    args = parser.parse_args(["config", "--entry", "src/main.py"])
+
+    assert args.command == "config"
+    assert args.configEntry == "src/main.py"
+
+
 def test_file_target_sets_targetfile() -> None:
     args = parser.parse_args(["script.py"])
 
@@ -251,6 +251,13 @@ def test_explicit_run_path_is_not_subcommand() -> None:
 
     assert args.command is None
     assert args.targetfile == "./run"
+
+
+def test_explicit_config_path_is_not_subcommand() -> None:
+    args = parser.parse_args(["./config"])
+
+    assert args.command is None
+    assert args.targetfile == "./config"
 
 
 def test_direct_file_rejects_doctor_quiet_flag() -> None:

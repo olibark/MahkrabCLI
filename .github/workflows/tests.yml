@@ -7,6 +7,31 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13', '3.14']
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package and test dependencies
+        run: python -m pip install -e '.[dev]'
+
+      - name: Run tests
+        run: pytest -s tests
+
+      - name: Run CLI integration matrix
+        run: bash tests/cli_cases/run_matrix.sh
+
+  artifacts:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
@@ -17,8 +42,29 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install package and test dependencies
-        run: python -m pip install -e '.[dev]'
+      - name: Install build tools
+        run: python -m pip install build twine
 
-      - name: Run tests
-        run: pytest -s tests
+      - name: Build wheel and source distribution
+        run: python -m build
+
+      - name: Check package metadata
+        run: python -m twine check dist/*
+
+      - name: Smoke test wheel install
+        run: |
+          python -m venv /tmp/mahkrab-wheel
+          /tmp/mahkrab-wheel/bin/python -m pip install --no-deps dist/*.whl
+          printf 'print("wheel-ok")\n' > /tmp/hello.py
+          /tmp/mahkrab-wheel/bin/mk --version
+          /tmp/mahkrab-wheel/bin/mk --help
+          /tmp/mahkrab-wheel/bin/mk /tmp/hello.py
+
+      - name: Smoke test sdist install
+        run: |
+          python -m venv /tmp/mahkrab-sdist
+          /tmp/mahkrab-sdist/bin/python -m pip install dist/*.tar.gz
+          printf 'print("sdist-ok")\n' > /tmp/hello.py
+          /tmp/mahkrab-sdist/bin/mk --version
+          /tmp/mahkrab-sdist/bin/mk --help
+          /tmp/mahkrab-sdist/bin/mk /tmp/hello.py

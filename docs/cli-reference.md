@@ -9,6 +9,7 @@ flag. For config-file usage, see the
 ```bash
 mk <target> [options]
 mk init [target] [options]
+mk config [options]
 mk run [options]
 mk build [options]
 mk doctor [target] [options]
@@ -18,12 +19,13 @@ mk doctor [target] [options]
 | --- | --- |
 | `mk <target>` | Runs a direct file target. The language is inferred from the extension unless `--lang` is supplied. |
 | `mk init [target]` | Creates `.mkconfig/mkconfig.toml` for project commands. |
+| `mk config` | Shows the resolved config file and reads or updates supported config keys. |
 | `mk run` | Loads the configured `entry` and runs it. Compiled languages are compiled and then run. |
 | `mk build` | Loads the configured `entry` and compiles it without running it. |
 | `mk doctor` | Checks whether required external compiler and interpreter commands are available. |
 
-`init`, `run`, `build`, and `doctor` are reserved subcommand names. To run a file with
-one of those names, provide an explicit path:
+`init`, `config`, `run`, `build`, and `doctor` are reserved subcommand names.
+To run a file with one of those names, provide an explicit path:
 
 ```bash
 mk ./init
@@ -50,7 +52,6 @@ These options are accepted by direct targets, `run`, `build`, and `doctor`.
 | `--compile-args`, `--tool-args` | `<args>` | Adds arguments to the compiler or interpreter command. `--tool-args` is an alias. |
 | `--program-args` | `<args>` | Adds arguments to the script or compiled program. |
 | `-c`, `--clear` | none | Clears the terminal before running the selected action. |
-| `-ls`, `--list` | `[level]` | Lists directory contents. Defaults to level `1` when no level is supplied. |
 | `-og`, `--ogs` | none | Runs the built-in `ogs` helper. |
 | `-t`, `--terry` | none | Runs the built-in Terry helper. |
 | `-e`, `--explain` | none | Prints the resolved execution plan before running. |
@@ -126,6 +127,66 @@ mk build --build-dir out
 `mk build` always compiles only. This is true even when `run_on_compile = true`
 appears in the config file.
 
+## `config`
+
+`mk config` inspects the Mahkrab config resolved from the current directory, or
+from an explicit `--config` path. It can print a summary, get one or more
+supported keys, or update supported keys without opening the TOML file manually.
+
+```bash
+mk config
+mk config --config ./examples/.mkconfig.toml
+mk config --entry
+mk config --entry src/main.c
+mk config --run-on-compile true
+mk config --compile-args "-O2 -Wall"
+mk config --env FOO=bar
+```
+
+With no getter or setter flags, `mk config` prints the resolved config path and
+the current values for supported keys. A key flag without a value is a getter:
+
+```bash
+mk config --entry
+mk config --entry --tool
+```
+
+A key flag with a value is a setter:
+
+```bash
+mk config --entry src/main.c
+mk config --clear false
+```
+
+Getters and setters cannot be mixed in the same command. A getter for an unset
+key exits with status `2`. Boolean setters accept `true`, `false`, `1`, or `0`;
+other boolean values exit with status `2` and leave the config unchanged.
+
+Config command options:
+
+| Option | Behavior |
+| --- | --- |
+| `--config <file>` | Uses a specific config file. If a directory is given, supported config names are checked inside it. |
+| `--entry [file]` | Gets or sets `entry`. |
+| `--cwd [dir]` | Gets or sets `cwd`. |
+| `--build-dir [dir]` | Gets or sets `build_dir`. |
+| `-o`, `--output [file]` | Gets or sets `output`. |
+| `--python [python]` | Gets or sets `python`. If `python_cmd` exists, getters read it as an alias and setters replace it with `python`. |
+| `--lang [language]` | Gets or sets `lang`. |
+| `--tool [tool]` | Gets or sets `tool`. |
+| `-r`, `--run-on-compile [bool]` | Gets or sets `run_on_compile`. |
+| `-c`, `--clear [bool]` | Gets or sets `clear`. |
+| `--compile-args [args]` | Gets or sets `compile_args` from a quoted shell-style string. If `tool_args` exists, getters read it as an alias and setters replace it with `compile_args`. |
+| `--program-args [args]` | Gets or sets `program_args` from a quoted shell-style string. |
+| `--env KEY=VALUE` | Adds or replaces one value in the `[env]` table. May be repeated. |
+
+`--env` is setter-only. Values must use `KEY=VALUE`; invalid values exit with
+status `2` and leave the config unchanged.
+
+If no config exists, `mk config` exits with status `2` and tells you to create
+one with `mk init`. If `--config` points to a missing file or directory without
+a supported config file, it exits with status `2` and prints the resolved path.
+
 ## `doctor`
 
 `mk doctor` checks for the external commands needed by one or more language
@@ -137,6 +198,8 @@ mk doctor src/main.py
 mk doctor --lang python,c,cpp
 mk doctor --all
 mk doctor --languages
+mk doctor --os windows
+mk doctor --json
 mk doctor --quiet
 mk doctor --verbose
 ```
@@ -160,6 +223,8 @@ Doctor output flags:
 | --- | --- |
 | `-q`, `--quiet` | Prints only the summary. |
 | `--verbose` | Prints extra diagnostics, including generated command plans. |
+| `--json` | Prints machine-readable JSON. |
+| `--os <os>` | Uses install hints for `linux`, `macos`, or `windows`. |
 
 `--quiet` and `--verbose` are mutually exclusive.
 

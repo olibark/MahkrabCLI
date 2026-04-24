@@ -130,6 +130,34 @@ class TestParserAndConfig(unittest.TestCase):
             self.assertEqual(settings.cwd, str(nestedDir.resolve()))
             self.assertEqual(settings.targetfile, str((nestedDir / 'hello.py').resolve()))
 
+    def test_direct_target_with_cwd_resolves_target_from_cwd(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            caseDir = projectDir / 'tests' / 'cli_cases'
+            caseDir.mkdir(parents=True)
+            (caseDir / 'hello.py').write_text('print("ok")\n', encoding='utf-8')
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['--cwd', 'tests/cli_cases', 'hello.py'])
+                settings = config.buildSettings(args)
+
+            self.assertEqual(settings.cwd, str(caseDir.resolve()))
+            self.assertEqual(settings.targetfile, str((caseDir / 'hello.py').resolve()))
+
+    def test_prepare_runtime_creates_explicit_output_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            sourcePath = projectDir / 'src' / 'main.c'
+            sourcePath.parent.mkdir(parents=True)
+            sourcePath.write_text('int main(void){return 0;}\n', encoding='utf-8')
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['src/main.c', '-o', 'out/nested/app'])
+                settings = config.prepareRuntime(config.buildSettings(args))
+
+                self.assertEqual(settings.outputfile, 'out/nested/app')
+                self.assertTrue((projectDir / 'out' / 'nested').is_dir())
+
     def test_doctor_options_load_from_config_table(self) -> None:
         with tempfile.TemporaryDirectory() as tempDir:
             projectDir = Path(tempDir) / 'project'
