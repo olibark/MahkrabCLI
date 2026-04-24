@@ -466,6 +466,13 @@ def prepareRuntime(settings: Settings) -> Settings:
 
         buildPath.mkdir(parents=True, exist_ok=True)
 
+        if settings.outputfile:
+            outputPath = Path(settings.outputfile).expanduser()
+            if not outputPath.is_absolute():
+                outputPath = cwdPath / outputPath
+
+            outputPath.parent.mkdir(parents=True, exist_ok=True)
+
     if settings.env:
         os.environ.update(settings.env)
 
