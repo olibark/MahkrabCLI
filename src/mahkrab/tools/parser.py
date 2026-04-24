@@ -30,7 +30,6 @@ OPTION_TOKENS = {
     '--all',
     '--languages',
     '-c', '--clear',
-    '-ls', '--list',
     '-og', '--ogs',
     '-t', '--terry',
     '-e', '--explain',
@@ -113,7 +112,7 @@ def preprocessArgv(argv: list[str] | None) -> tuple[list[str], dict[str, list[li
 
 def createParser() -> ap.ArgumentParser:
     return ap.ArgumentParser(
-        prog="MAHKRAB-CLI",
+        prog="mk",
         epilog=(
             "Commands: run (compile and run configured entry), "
             "build (compile configured entry only), "
@@ -193,11 +192,6 @@ def addUtilityArgs(parser: ap.ArgumentParser) -> None:
         '-c', '--clear',
         action='store_true',
         help="Clear the console before execution"
-    )
-    parser.add_argument(
-        '-ls', '--list',
-        type=int, metavar='<listLevel>', nargs='?', const=1,
-        help='Lists the directories contents',
     )
     parser.add_argument(
         '-og', '--ogs',
@@ -503,7 +497,6 @@ def fillMissingArgs(args: ap.Namespace) -> None:
         'doctorLanguages': False,
         'force': False,
         'clear': False,
-        'list': None,
         'ogs': False,
         'terry': False,
         'explain': False,

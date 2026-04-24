@@ -311,6 +311,17 @@ def buildSettings(args: ap.Namespace) -> Settings:
     rootDir = configRoot(configPath)
 
     command = getattr(args, 'command', None)
+    argsCwd = getattr(args, 'cwd', None)
+    configCwd = configData.get('cwd')
+    if argsCwd:
+        cwdPath = resolvePath(str(argsCwd), invocationDir)
+    elif configCwd:
+        cwdPath = resolvePath(str(configCwd), rootDir)
+    elif command in ('build', 'run') and configPath is not None:
+        cwdPath = rootDir
+    else:
+        cwdPath = invocationDir
+
     entry = configData.get('entry')
     explicitTargetfile = getattr(args, 'targetfile', None)
     doctorTarget = getattr(args, 'doctorTarget', None) if command == 'doctor' else None
@@ -324,19 +335,13 @@ def buildSettings(args: ap.Namespace) -> Settings:
 
     resolvedTargetfile = None
     if targetfile:
-        targetBaseDir = invocationDir if explicitTargetfile or doctorTarget else rootDir
+        if (explicitTargetfile or doctorTarget) and argsCwd:
+            targetBaseDir = cwdPath
+        elif explicitTargetfile or doctorTarget:
+            targetBaseDir = invocationDir
+        else:
+            targetBaseDir = rootDir
         resolvedTargetfile = str(resolvePath(str(targetfile), targetBaseDir))
-
-    argsCwd = getattr(args, 'cwd', None)
-    configCwd = configData.get('cwd')
-    if argsCwd:
-        cwdPath = resolvePath(str(argsCwd), invocationDir)
-    elif configCwd:
-        cwdPath = resolvePath(str(configCwd), rootDir)
-    elif command in ('build', 'run') and configPath is not None:
-        cwdPath = rootDir
-    else:
-        cwdPath = invocationDir
 
     buildDir = str(getattr(args, 'buildDir', None) or configData.get('build_dir', 'build'))
     outputfile = getattr(args, 'output', None) or configData.get('output')

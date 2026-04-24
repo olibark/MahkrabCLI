@@ -6,7 +6,6 @@ from mahkrab import cli
 def make_args(**overrides):
     defaults = {
         "command": None,
-        "list": None,
         "ogs": False,
         "terry": False,
     }
@@ -82,20 +81,6 @@ def test_cli_builds_targetfile_and_returns_build_code(monkeypatch) -> None:
         "outputfile": "build/main",
         "settings": settings,
     }
-
-
-def test_cli_runs_list_flag(monkeypatch) -> None:
-    args = make_args(list=2)
-    settings = make_settings()
-    called = {}
-
-    monkeypatch.setattr(cli.parser, "parse_args", lambda argv: args)
-    monkeypatch.setattr(cli.config, "buildSettings", lambda parsed: settings)
-    monkeypatch.setattr(cli.config, "prepareRuntime", lambda built: built)
-    monkeypatch.setattr(cli.tree, "list", lambda level: called.setdefault("level", level))
-
-    assert cli.main(["--list", "2"]) == 0
-    assert called["level"] == 2
 
 
 def test_cli_runs_ogs_flag(monkeypatch) -> None:

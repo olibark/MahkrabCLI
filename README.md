@@ -449,6 +449,8 @@ mk -h
 pytest tests
 ```
 
+MahkrabCLI supports Python 3.11 and newer.
+
 ### Internal Layout
 
 - `src/mahkrab/cli.py`: CLI entry point.

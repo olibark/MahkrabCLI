@@ -52,7 +52,6 @@ These options are accepted by direct targets, `run`, `build`, and `doctor`.
 | `--compile-args`, `--tool-args` | `<args>` | Adds arguments to the compiler or interpreter command. `--tool-args` is an alias. |
 | `--program-args` | `<args>` | Adds arguments to the script or compiled program. |
 | `-c`, `--clear` | none | Clears the terminal before running the selected action. |
-| `-ls`, `--list` | `[level]` | Lists directory contents. Defaults to level `1` when no level is supplied. |
 | `-og`, `--ogs` | none | Runs the built-in `ogs` helper. |
 | `-t`, `--terry` | none | Runs the built-in Terry helper. |
 | `-e`, `--explain` | none | Prints the resolved execution plan before running. |
@@ -199,6 +198,8 @@ mk doctor src/main.py
 mk doctor --lang python,c,cpp
 mk doctor --all
 mk doctor --languages
+mk doctor --os windows
+mk doctor --json
 mk doctor --quiet
 mk doctor --verbose
 ```
@@ -222,6 +223,8 @@ Doctor output flags:
 | --- | --- |
 | `-q`, `--quiet` | Prints only the summary. |
 | `--verbose` | Prints extra diagnostics, including generated command plans. |
+| `--json` | Prints machine-readable JSON. |
+| `--os <os>` | Uses install hints for `linux`, `macos`, or `windows`. |
 
 `--quiet` and `--verbose` are mutually exclusive.
 

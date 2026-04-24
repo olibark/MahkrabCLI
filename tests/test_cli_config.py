@@ -130,6 +130,20 @@ class TestParserAndConfig(unittest.TestCase):
             self.assertEqual(settings.cwd, str(nestedDir.resolve()))
             self.assertEqual(settings.targetfile, str((nestedDir / 'hello.py').resolve()))
 
+    def test_direct_target_with_cwd_resolves_target_from_cwd(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            projectDir = Path(tempDir) / 'project'
+            caseDir = projectDir / 'tests' / 'cli_cases'
+            caseDir.mkdir(parents=True)
+            (caseDir / 'hello.py').write_text('print("ok")\n', encoding='utf-8')
+
+            with Chdir(str(projectDir)):
+                args = parser.parse_args(['--cwd', 'tests/cli_cases', 'hello.py'])
+                settings = config.buildSettings(args)
+
+            self.assertEqual(settings.cwd, str(caseDir.resolve()))
+            self.assertEqual(settings.targetfile, str((caseDir / 'hello.py').resolve()))
+
     def test_doctor_options_load_from_config_table(self) -> None:
         with tempfile.TemporaryDirectory() as tempDir:
             projectDir = Path(tempDir) / 'project'

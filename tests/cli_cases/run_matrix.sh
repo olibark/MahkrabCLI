@@ -99,13 +99,6 @@ expect_ok "cwd flag" --cwd "$CASE_DIR" hello.py
 expect_ok "ogs flag" -og
 expect_ok "terry flag" -t
 
-if ensure_tool tree; then
-  expect_ok "list flag" -ls 1
-else
-  record SKIP "list flag (missing tree)"
-  skip=$((skip + 1))
-fi
-
 # mk run with .mkconfig/.mkconfig.toml
 PROJECT_DIR="$CASE_DIR/project_run"
 mkdir -p "$PROJECT_DIR/.mkconfig"

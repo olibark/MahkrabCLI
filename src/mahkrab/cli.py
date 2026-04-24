@@ -3,7 +3,7 @@ import tomllib
 from typing import Callable, Optional
 
 from mahkrab import constants as c
-from mahkrab.func import configcmd, doctor, og, terry, tree, workflow
+from mahkrab.func import configcmd, doctor, og, terry, workflow
 from mahkrab.tools import config, initconfig, parser
 
 
@@ -48,11 +48,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 2
 
     actionRunTarget = bool(settings.targetfile)
-    actionList = bool(args.list)
     actionOgs = bool(args.ogs)
     actionTerry = bool(args.terry)
     actionDoctor = args.command == 'doctor'
-    hasAction = actionRunTarget or actionList or actionOgs or actionTerry or actionDoctor
+    hasAction = actionRunTarget or actionOgs or actionTerry or actionDoctor
 
     if args.command in ('build', 'run') and not settings.targetfile:
         printError("No 'entry' configured in .mkconfig/mkconfig.toml.")
@@ -78,7 +77,6 @@ def main(argv: Optional[list[str]] = None) -> int:
             ),
         ),
         'ogs': (actionOgs, og.ogs),
-        'list': (actionList, lambda: tree.list(args.list)),
     }
 
     for _name, (shouldRun, handler) in handlers.items():

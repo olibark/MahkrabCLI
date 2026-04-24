@@ -137,20 +137,6 @@ def test_parses_clear_flag(flag: str) -> None:
     assert args.clear is True
 
 
-@pytest.mark.parametrize("flag", ["-ls", "--list"])
-def test_parses_list_flag_with_default_level(flag: str) -> None:
-    args = parser.parse_args([flag])
-
-    assert args.list == 1
-
-
-@pytest.mark.parametrize("flag", ["-ls", "--list"])
-def test_parses_list_flag_with_explicit_level(flag: str) -> None:
-    args = parser.parse_args([flag, "3"])
-
-    assert args.list == 3
-
-
 @pytest.mark.parametrize(
     "flag, field",
     [
