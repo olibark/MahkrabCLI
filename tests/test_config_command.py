@@ -24,6 +24,19 @@ def test_config_without_existing_config_returns_helpful_error(monkeypatch, tmp_p
     assert 'mk init' in output
 
 
+def test_config_missing_explicit_config_returns_resolved_path(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    missingPath = tmp_path / 'missing.toml'
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(['config', '--config', str(missingPath)]) == 2
+
+    output = capsys.readouterr().out
+    assert f'Config file not found: {missingPath}' in output
+    assert 'mk init' in output
+
+
 def test_config_summary_prints_resolved_path_and_values(
     monkeypatch, tmp_path: Path, capsys
 ) -> None:
@@ -122,6 +135,33 @@ def test_config_boolean_getters_and_setters(
     assert data['clear'] is False
 
 
+def test_config_boolean_setter_rejects_invalid_value(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    configPath = tmp_path / '.mkconfig' / 'mkconfig.toml'
+    writeConfig(configPath, 'run_on_compile = false\n')
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(['config', '--run-on-compile', 'sometimes']) == 2
+
+    output = capsys.readouterr().out
+    assert "Invalid value for 'run_on_compile'" in output
+    assert readConfig(configPath)['run_on_compile'] is False
+
+
+def test_config_getter_for_unset_key_returns_error(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    configPath = tmp_path / '.mkconfig' / 'mkconfig.toml'
+    writeConfig(configPath, 'entry = "src/main.py"\n')
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(['config', '--output']) == 2
+
+    output = capsys.readouterr().out
+    assert "Config key 'output' is not set." in output
+
+
 def test_config_list_setters_update_compile_and_program_args(
     monkeypatch, tmp_path: Path, capsys
 ) -> None:
@@ -167,3 +207,41 @@ def test_config_env_setter_updates_env_table(
     data = readConfig(configPath)
     assert data['env'] == {'FOO': 'bar', 'HELLO': 'world'}
 
+
+def test_config_env_setter_rejects_invalid_values(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    configPath = tmp_path / '.mkconfig' / 'mkconfig.toml'
+    writeConfig(configPath, 'entry = "src/main.py"\n')
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(['config', '--env', 'FOO']) == 2
+    assert 'Invalid --env value: FOO' in capsys.readouterr().out
+    assert 'env' not in readConfig(configPath)
+
+    assert cli.main(['config', '--env', '=bar']) == 2
+    assert 'Invalid --env value: =bar' in capsys.readouterr().out
+    assert 'env' not in readConfig(configPath)
+
+
+def test_config_uses_explicit_config_path_for_getters_and_setters(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    discoveredPath = tmp_path / '.mkconfig' / 'mkconfig.toml'
+    explicitPath = tmp_path / 'configs' / 'custom.toml'
+    writeConfig(discoveredPath, 'entry = "src/discovered.py"\n')
+    writeConfig(explicitPath, 'entry = "src/explicit.py"\n')
+    monkeypatch.chdir(tmp_path)
+
+    assert cli.main(['config', '--config', str(explicitPath), '--entry']) == 0
+    output = capsys.readouterr().out
+    assert 'src/explicit.py' in output
+    assert 'src/discovered.py' not in output
+
+    assert (
+        cli.main(['config', '--config', str(explicitPath), '--entry', 'src/updated.py'])
+        == 0
+    )
+
+    assert readConfig(explicitPath)['entry'] == 'src/updated.py'
+    assert readConfig(discoveredPath)['entry'] == 'src/discovered.py'

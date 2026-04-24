@@ -232,6 +232,7 @@ uses the normal coloured Mahkrab conventions.
 
 ```bash
 mk config
+mk config --config ./examples/.mkconfig.toml
 mk config --entry
 mk config --entry src/main.c
 mk config --run-on-compile true
@@ -259,9 +260,11 @@ Boolean setters accept `true`, `false`, `1`, or `0`. `--compile-args` and
 as a TOML string array. `--env KEY=VALUE` adds or replaces entries in the
 `[env]` table.
 
-If no config exists, `mk config` exits with status `2` and tells you to create
-one with `mk init`. Config updates preserve existing keys and rewrite the TOML
-file deterministically, but comments and original formatting may be normalized.
+Use `--config <file>` with `mk config` to read or update a specific config
+instead of the discovered one. If no config exists, `mk config` exits with
+status `2` and tells you to create one with `mk init`. Config updates preserve
+existing keys and rewrite the TOML file deterministically, but comments and
+original formatting may be normalized.
 
 ## Passing Arguments
 
