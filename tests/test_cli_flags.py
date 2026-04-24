@@ -145,6 +145,21 @@ def test_cli_runs_doctor_command(monkeypatch) -> None:
     assert called["settings"] is settings
 
 
+def test_cli_runs_config_command(monkeypatch) -> None:
+    args = make_args(command="config")
+    called = {}
+
+    monkeypatch.setattr(cli.parser, "parse_args", lambda argv: args)
+    monkeypatch.setattr(
+        cli.configcmd,
+        "run",
+        lambda parsed: called.setdefault("args", parsed) is parsed and 6,
+    )
+
+    assert cli.main(["config"]) == 6
+    assert called["args"] is args
+
+
 def test_cli_clears_before_action(monkeypatch) -> None:
     args = make_args(ogs=True)
     settings = make_settings(clear=True)

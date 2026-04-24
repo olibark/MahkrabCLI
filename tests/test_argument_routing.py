@@ -38,6 +38,14 @@ def test_parse_args_rejects_unknown_args_without_program_forwarding() -> None:
     assert excinfo.value.code == 2
 
 
+def test_config_command_does_not_break_run_argument_forwarding() -> None:
+    args = parser.parse_args(['run', '--compile-args', '-O2', '--program-args', '--', 'hello'])
+
+    assert args.command == 'run'
+    assert args.compileArgs == ['-O2']
+    assert args.programArgs == ['hello']
+
+
 def test_build_settings_merges_compile_and_program_args(tmp_path: Path) -> None:
     config_path = tmp_path / '.mkconfig.toml'
     config_path.write_text(

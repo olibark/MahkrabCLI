@@ -5,7 +5,9 @@ import sys
 from mahkrab.tools.targetos import SUPPORTED_TARGET_OSES
 from mahkrab.tools.getversion import get_version
 
-COMMANDS = {'build', 'doctor', 'init', 'run'}
+COMMANDS = {'build', 'config', 'doctor', 'init', 'run'}
+FORWARDING_COMMANDS = {'build', 'doctor', 'run'}
+CONFIG_GETTER = object()
 SPECIAL_ARG_DESTS = {
     '--compile-args': 'compileArgsRaw',
     '--tool-args': 'compileArgsRaw',
@@ -65,6 +67,11 @@ def preprocessArgv(argv: list[str] | None) -> tuple[list[str], dict[str, list[li
         'compileArgsRaw': [],
         'programArgsRaw': [],
     }
+    firstArg = tokens[0] if tokens else None
+    usesForwarding = firstArg not in COMMANDS or firstArg in FORWARDING_COMMANDS
+
+    if not usesForwarding:
+        return tokens, rawArgValues
 
     index = 0
     while index < len(tokens):
@@ -110,6 +117,7 @@ def createParser() -> ap.ArgumentParser:
         epilog=(
             "Commands: run (compile and run configured entry), "
             "build (compile configured entry only), "
+            "config (inspect or update project config), "
             "init (create project config), "
             "doctor (diagnose external toolchains)."
         ),
@@ -303,6 +311,116 @@ def addInitArgs(parser: ap.ArgumentParser) -> None:
     )
 
 
+def addConfigValueArg(
+    parser: ap.ArgumentParser,
+    *flags: str,
+    dest: str,
+    metavar: str,
+    helpText: str,
+) -> None:
+    parser.add_argument(
+        *flags,
+        dest=dest,
+        nargs='?',
+        const=CONFIG_GETTER,
+        metavar=metavar,
+        help=helpText,
+    )
+
+
+def addConfigArgs(parser: ap.ArgumentParser) -> None:
+    parser.add_argument(
+        '--config',
+        type=str, metavar='<file>',
+        help='Path to configuration file',
+    )
+    addConfigValueArg(
+        parser,
+        '--entry',
+        dest='configEntry',
+        metavar='<file>',
+        helpText='Get or set entry',
+    )
+    addConfigValueArg(
+        parser,
+        '--cwd',
+        dest='configCwd',
+        metavar='<dir>',
+        helpText='Get or set cwd',
+    )
+    addConfigValueArg(
+        parser,
+        '--build-dir',
+        dest='configBuildDir',
+        metavar='<dir>',
+        helpText='Get or set build_dir',
+    )
+    addConfigValueArg(
+        parser,
+        '-o', '--output',
+        dest='configOutput',
+        metavar='<file>',
+        helpText='Get or set output',
+    )
+    addConfigValueArg(
+        parser,
+        '--python',
+        dest='configPython',
+        metavar='<python>',
+        helpText='Get or set python',
+    )
+    addConfigValueArg(
+        parser,
+        '--lang',
+        dest='configLang',
+        metavar='<language>',
+        helpText='Get or set lang',
+    )
+    addConfigValueArg(
+        parser,
+        '--tool',
+        dest='configTool',
+        metavar='<tool>',
+        helpText='Get or set tool',
+    )
+    addConfigValueArg(
+        parser,
+        '-r', '--run-on-compile',
+        dest='configRunOnCompile',
+        metavar='<bool>',
+        helpText='Get or set run_on_compile',
+    )
+    addConfigValueArg(
+        parser,
+        '-c', '--clear',
+        dest='configClear',
+        metavar='<bool>',
+        helpText='Get or set clear',
+    )
+    addConfigValueArg(
+        parser,
+        '--compile-args',
+        dest='configCompileArgs',
+        metavar='<args>',
+        helpText='Get or set compile_args from a quoted shell string',
+    )
+    addConfigValueArg(
+        parser,
+        '--program-args',
+        dest='configProgramArgs',
+        metavar='<args>',
+        helpText='Get or set program_args from a quoted shell string',
+    )
+    parser.add_argument(
+        '--env',
+        dest='configEnv',
+        action='append',
+        default=[],
+        metavar='KEY=VALUE',
+        help='Set or replace an env value in the [env] table',
+    )
+
+
 def createDirectParser() -> ap.ArgumentParser:
     parser = createParser()
     parser.add_argument(
@@ -330,6 +448,9 @@ def createCommandParser() -> ap.ArgumentParser:
     initParser = subparsers.add_parser('init', help='Create project config')
     addInitArgs(initParser)
 
+    configParser = subparsers.add_parser('config', help='Inspect or update project config')
+    addConfigArgs(configParser)
+
     doctorParser = subparsers.add_parser('doctor', help='Diagnose external toolchains')
     doctorParser.add_argument(
         'doctorTarget',
@@ -349,6 +470,18 @@ def fillMissingArgs(args: ap.Namespace) -> None:
         'initTarget': None,
         'initEntry': None,
         'doctorTarget': None,
+        'configEntry': None,
+        'configCwd': None,
+        'configBuildDir': None,
+        'configOutput': None,
+        'configPython': None,
+        'configLang': None,
+        'configTool': None,
+        'configRunOnCompile': None,
+        'configClear': None,
+        'configCompileArgs': None,
+        'configProgramArgs': None,
+        'configEnv': [],
         'targetfile': None,
         'output': None,
         'buildDir': None,

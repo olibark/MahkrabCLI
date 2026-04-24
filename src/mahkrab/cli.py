@@ -3,7 +3,7 @@ import tomllib
 from typing import Callable, Optional
 
 from mahkrab import constants as c
-from mahkrab.func import doctor, og, terry, tree, workflow
+from mahkrab.func import configcmd, doctor, og, terry, tree, workflow
 from mahkrab.tools import config, initconfig, parser
 
 
@@ -27,6 +27,9 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.command == 'init':
         return initconfig.run(args)
+
+    if args.command == 'config':
+        return configcmd.run(args)
 
     try:
         settings = config.buildSettings(args)
